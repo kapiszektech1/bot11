@@ -6,7 +6,7 @@ module.exports = {
         
         return new EmbedBuilder()
             .setTitle('🔵 VAULT REP x NOWE ZAPROSZENIE')
-            .setDescription('>> **Nowa osoba!**')
+            .setDescription('**Informacje o koncie:**')
             .setColor(0x00008B) // Kolor: Ciemny Niebieski (Dark Blue)
             // Miniaturka: Zdjęcie profilowe nowego członka
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
