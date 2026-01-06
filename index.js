@@ -1,12 +1,13 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { createWelcomeEmbed } = require('./powitania.js');
+const { createLuxuryInviteEmbed } = require('./zaproszenia.js'); // Import nowego pliku
 const http = require('http');
 require('dotenv').config();
 
 // Serwer HTTP dla Koyeb
 const port = process.env.PORT || 8080;
 http.createServer((req, res) => {
-  res.write('Bot is online!');
+  res.write('VAULT REP Bot is online!');
   res.end();
 }).listen(port);
 
@@ -15,35 +16,62 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildInvites // Potrzebne do śledzenia zaproszeń
     ]
 });
 
-const WELCOME_CHANNEL_ID = '1457675865524801568';
+// KONFIGURACJA KANAŁÓW
+const WELCOME_CHANNEL_ID = '1457675865524801568'; // Kanał powitalny
+const INVITE_LOG_CHANNEL_ID = '1457675879219200033'; // Kanał dla ciemnoniebieskiego panelu
 
-client.once('ready', () => {
-    console.log(`--- REP VAULT Bot Online ---`);
-});
+const invites = new Collection();
 
-// Poprawiona funkcja na dołączenie
-client.on('guildMemberAdd', async (member) => {
-    // Wymuszamy pobranie pełnych danych o serwerze
-    const guild = await member.guild.fetch();
-    const channel = guild.channels.cache.get(WELCOME_CHANNEL_ID);
+client.once('ready', async () => {
+    console.log(`--- VAULT REP Bot Online ---`);
     
-    if (channel) {
-        const embed = createWelcomeEmbed(member);
-        await channel.send({ embeds: [embed] });
+    // Pobieramy zaproszenia na start, żeby bot wiedział kto kogo zaprasza
+    for (const [id, guild] of client.guilds.cache) {
+        try {
+            const guildInvites = await guild.invites.fetch();
+            invites.set(guild.id, new Collection(guildInvites.map(inv => [inv.code, inv.uses])));
+        } catch (err) {
+            console.log(`Nie udało się pobrać zaproszeń dla: ${guild.name}`);
+        }
     }
 });
 
-// Poprawiona komenda testowa
+client.on('guildMemberAdd', async (member) => {
+    // 1. OBSŁUGA POWITANIA (Zwykłe)
+    const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (welcomeChannel) {
+        const welcomeEmbed = createWelcomeEmbed(member);
+        await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
+    }
+
+    // 2. OBSŁUGA LOGÓW ZAPROSZEŃ (Ciemnoniebieski panel Luxury)
+    const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
+    if (logChannel) {
+        // Logika szukania zapraszającego
+        const newInvites = await member.guild.invites.fetch().catch(() => new Collection());
+        const oldInvites = invites.get(member.guild.id);
+        const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
+        const inviter = invite ? invite.inviter : null;
+
+        // Aktualizacja pamięci zaproszeń
+        invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
+
+        const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
+        await logChannel.send({ embeds: [inviteEmbed] }).catch(console.error);
+    }
+});
+
+// Komenda testowa
 client.on('messageCreate', async (message) => {
     if (message.content === '!powitania-test') {
-        // Wymuszamy odświeżenie danych serwera przed testem
         const guild = await message.guild.fetch();
         const embed = createWelcomeEmbed(message.member);
-        await message.channel.send({ content: `🚀 **Test dla serwera: ${guild.name}**`, embeds: [embed] });
+        await message.channel.send({ content: `🚀 **Test powitania dla: ${guild.name}**`, embeds: [embed] });
     }
 });
 
