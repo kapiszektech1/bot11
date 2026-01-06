@@ -7,8 +7,8 @@ module.exports = {
         const currentDate = new Date().toLocaleDateString('pl-PL');
 
         return new EmbedBuilder()
-            .setTitle('Witaj w REP VAULT')
-            .setDescription(`Cześć <@${member.id}>! Miło nam że dołączyłeś.`)
+            .setTitle('REP VAULT x NOWA OSOBA!')
+            .setDescription(`Witaj <@${member.id}>! Miło nam że dołączyłeś.`)
             .setColor(0x0000FF)
             .addFields(
                 { name: '🎟️ Zgarnij zestaw kuponów', value: '👉 [Kupony na 410$](https://ikako.vip/r/xhm44)', inline: false },
