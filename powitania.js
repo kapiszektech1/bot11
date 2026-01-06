@@ -1,0 +1,17 @@
+const { EmbedBuilder } = require('discord.js');
+
+module.exports = {
+    createWelcomeEmbed: (member) => {
+        return new EmbedBuilder()
+            .setTitle('Witaj w REP VAULT')
+            .setDescription(`Cześć <@${member.id}>! Cieszymy się, że dołączyłeś.`)
+            .setColor(0x0000FF)
+            .addFields(
+                { name: '🚀 Zgarnij Kupony o wartości $410', value: '👉 [Najlepsze Kupony](https://ikako.vip/r/xhm44)', inline: false },
+                { name: '👤 ID', value: `\`${member.id}\``, inline: true },
+                { name: '📈 Jesteś', value: `#${member.guild.member_count} osobą`, inline: true }
+            )
+            .setThumbnail(member.user.displayAvatarURL())
+            .setFooter({ text: 'REP VAULT' });
+    }
+};
