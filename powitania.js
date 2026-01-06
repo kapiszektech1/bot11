@@ -8,17 +8,17 @@ module.exports = {
 
         return new EmbedBuilder()
             .setTitle('Witaj w REP VAULT')
-            .setDescription(`Cześć <@${member.id}>! Cieszymy się, że dołączyłeś.`)
+            .setDescription(`Cześć <@${member.id}>! Miło nam że dołączyłeś.`)
             .setColor(0x0000FF)
             .addFields(
-                { name: '🚀 Zgarnij Kupony o wartości $410', value: '👉 [Najlepsze Kupony](https://ikako.vip/r/xhm44)', inline: false },
-                { name: '👤 ID', value: `\`${member.id}\``, inline: true },
-                { name: '📅 Data', value: `\`${currentDate}\``, inline: true },
-                { name: '📈 Jesteś', value: `${memberCount} osobą`, inline: true }
+                { name: '🎟️ Zgarnij zestaw kuponów', value: '👉 [Kupony na 410$](https://ikako.vip/r/xhm44)', inline: false },
+                { name: '🤖 ID użytkownika', value: `\`${member.id}\``, inline: true },
+                { name: '🗓️ Data dołączenia', value: `\`${currentDate}\``, inline: true },
+                { name: '🔢 Jest już nas', value: `${memberCount}`, inline: true }
             )
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             // TUTAJ WKLEJ LINK DO SWOJEGO OBRAZKA (np. z Imgur)
-            .setImage('https://cdn.discordapp.com/attachments/1458122275973890222/1458146242608632034/Gemini_Generated_Image_uq8kmeuq8kmeuq8k.png?ex=695e9403&is=695d4283&hm=f009e95d74398d893cef686a462c77e5ed5dd50b781e611662886e456fc0dfc5') 
+            .setImage('https://cdn.discordapp.com/attachments/1458122275973890222/1458151540077629604/image.png?ex=695e98f2&is=695d4772&hm=ad1421323883a444f1e341ea0c129b2c1f7bb9bcd4a5774fa759772084a90fc6') 
             .setFooter({ text: 'REP VAULT' });
     }
 };
