@@ -14,7 +14,7 @@ module.exports = {
                 { name: '🚀 Zgarnij Kupony o wartości $410', value: '👉 [Najlepsze Kupony](https://ikako.vip/r/xhm44)', inline: false },
                 { name: '👤 ID', value: `\`${member.id}\``, inline: true },
                 { name: '📅 Data', value: `\`${currentDate}\``, inline: true },
-                { name: '📈 Jesteś', value: `#${memberCount} osobą`, inline: true }
+                { name: '📈 Jesteś', value: `${memberCount} osobą`, inline: true }
             )
             .setThumbnail(member.user.displayAvatarURL())
             .setFooter({ text: 'REP VAULT' });
