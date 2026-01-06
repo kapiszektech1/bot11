@@ -1,15 +1,18 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { createWelcomeEmbed } = require('./powitania.js');
-const { createLuxuryInviteEmbed } = require('./zaproszenia.js'); // Import nowego pliku
+const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const http = require('http');
 require('dotenv').config();
 
-// Serwer HTTP dla Koyeb
+// --- SYSTEM ANTI-SLEEP DLA KOYEB ---
 const port = process.env.PORT || 8080;
 http.createServer((req, res) => {
-  res.write('VAULT REP Bot is online!');
-  res.end();
-}).listen(port);
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.write('VAULT REP SYSTEM: ONLINE');
+    res.end();
+}).listen(port, () => {
+    console.log(`--- Serwer Keep-Alive aktywny na porcie ${port} ---`);
+});
 
 const client = new Client({
     intents: [
@@ -17,48 +20,49 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildInvites // Potrzebne do śledzenia zaproszeń
+        GatewayIntentBits.GuildInvites
     ]
 });
 
-// KONFIGURACJA KANAŁÓW
-const WELCOME_CHANNEL_ID = '1457675865524801568'; // Kanał powitalny
-const INVITE_LOG_CHANNEL_ID = '1457675879219200033'; // Kanał dla ciemnoniebieskiego panelu
+// KONFIGURACJA KANAŁÓW VAULT REP
+const WELCOME_CHANNEL_ID = '1457675865524801568'; 
+const INVITE_LOG_CHANNEL_ID = '1457675879219200033'; 
 
 const invites = new Collection();
 
 client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
-    // Pobieramy zaproszenia na start, żeby bot wiedział kto kogo zaprasza
+    // Inicjalizacja zaproszeń dla każdego serwera
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
             invites.set(guild.id, new Collection(guildInvites.map(inv => [inv.code, inv.uses])));
         } catch (err) {
-            console.log(`Nie udało się pobrać zaproszeń dla: ${guild.name}`);
+            console.log(`Błąd pobierania zaproszeń dla: ${guild.name}`);
         }
     }
 });
 
 client.on('guildMemberAdd', async (member) => {
-    // 1. OBSŁUGA POWITANIA (Zwykłe)
+    // 1. POWITANIE
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
         const welcomeEmbed = createWelcomeEmbed(member);
         await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
     }
 
-    // 2. OBSŁUGA LOGÓW ZAPROSZEŃ (Ciemnoniebieski panel Luxury)
+    // 2. LOGI ZAPROSZEŃ (Luxury Dark Blue)
     const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
     if (logChannel) {
-        // Logika szukania zapraszającego
         const newInvites = await member.guild.invites.fetch().catch(() => new Collection());
         const oldInvites = invites.get(member.guild.id);
+        
+        // Szukanie kodu, który został użyty
         const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
         const inviter = invite ? invite.inviter : null;
 
-        // Aktualizacja pamięci zaproszeń
+        // Odświeżenie cache zaproszeń
         invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
 
         const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
@@ -66,13 +70,12 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// Komenda testowa
+// KOMENDA TESTOWA
 client.on('messageCreate', async (message) => {
-    if (message.content === '!powitania-test') {
-        const guild = await message.guild.fetch();
+    if (message.content === '!powitania-test' && !message.author.bot) {
         const embed = createWelcomeEmbed(message.member);
-        await message.channel.send({ content: `🚀 **Test powitania dla: ${guild.name}**`, embeds: [embed] });
+        await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
     }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN)
