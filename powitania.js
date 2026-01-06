@@ -19,6 +19,6 @@ module.exports = {
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             // TUTAJ WKLEJ LINK DO SWOJEGO OBRAZKA (np. z Imgur)
             .setImage('https://cdn.discordapp.com/attachments/1458122275973890222/1458151540077629604/image.png?ex=695e98f2&is=695d4772&hm=ad1421323883a444f1e341ea0c129b2c1f7bb9bcd4a5774fa759772084a90fc6') 
-            .setFooter({ text: 'REP VAULT' });
+            .setFooter({ text: 'Pozdrawiamy!' });
     }
 };
