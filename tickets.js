@@ -28,7 +28,7 @@ const CONFIG = {
         COLLAB: ['1457675858553864274', '1457675858537091222', '1457675858537091221']
     },
     COLOR: 0x00008B, 
-    IMAGE: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png?ex=695fbc9f&is=695e6b1f&hm=e76babee672f3a54d6da72d46f347d069f9f45e3b471ea7eb02407934f7d87cb'
+    IMAGE: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png'
 };
 
 async function logAction(guild, title, fields, color = 0x2B2D31) {
@@ -61,8 +61,8 @@ async function createTicketChannel(interaction, categoryKey, reason) {
         parent: categoryId,
         permissionOverwrites: [
             { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles] },
-            ...allowedRoles.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }))
+            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] },
+            ...allowedRoles.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
         ]
     });
 
@@ -165,12 +165,29 @@ module.exports = {
                     return interaction.reply({ content: '❌ Nie masz uprawnień!', flags: [MessageFlags.Ephemeral] });
                 }
 
-                const creatorId = interaction.channel.permissionOverwrites.cache.find(p => p.type === 1 && !allowedRoles.includes(p.id))?.id;
+                // Szukamy twórcy ticketu w uprawnieniach (ktoś, kto nie ma ról administracyjnych)
+                const creatorOverwrite = interaction.channel.permissionOverwrites.cache.find(p => 
+                    p.type === 1 && 
+                    !allowedRoles.includes(p.id) && 
+                    p.id !== interaction.client.user.id
+                );
 
+                const creatorId = creatorOverwrite ? creatorOverwrite.id : null;
+
+                // Ustawienie uprawnień: Tylko admin przejmujący + twórca ticketu
                 await interaction.channel.permissionOverwrites.set([
-                    { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                    ...(creatorId ? [{ id: creatorId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }] : [])
+                    { 
+                        id: interaction.guild.id, 
+                        deny: [PermissionFlagsBits.ViewChannel] 
+                    },
+                    { 
+                        id: interaction.user.id, 
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] 
+                    },
+                    ...(creatorId ? [{ 
+                        id: creatorId, 
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] 
+                    }] : [])
                 ]);
 
                 await interaction.reply({ embeds: [new EmbedBuilder().setDescription(`🔒 Zgłoszenie przejęte przez **${interaction.user}**.`).setColor(CONFIG.COLOR)] });
