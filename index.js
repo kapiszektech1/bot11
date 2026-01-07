@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
 const { createWelcomeEmbed } = require('./powitania.js');
 const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
@@ -34,6 +34,16 @@ const invites = new Collection();
 client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
+    // --- STATUS STREAMOWANIA ---
+    client.user.setPresence({
+        activities: [{ 
+            name: 'REP VAULT | 410$ BIO', 
+            type: ActivityType.Streaming,
+            url: 'https://www.twitch.tv/discord' 
+        }],
+        status: 'online',
+    });
+    
     // Inicjalizacja zaproszeń
     for (const [id, guild] of client.guilds.cache) {
         try {
@@ -43,28 +53,23 @@ client.once('ready', async () => {
             console.log(`Błąd zaproszeń dla: ${guild.name}`);
         }
     }
-    // STATUS: Automatyczne wysyłanie panelu zostało USUNIĘTE.
 });
 
 // --- OBSŁUGA INTERAKCJI (KOMENDY, PRZYCISKI, MENU, MODALE) ---
 client.on('interactionCreate', async interaction => {
-    // 1. Obsługa komend Slash
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
-        // Panel Kuponów
         if (commandName === 'panel-kupony') {
             return await panelKupony.execute(interaction);
         }
 
-        // Panel Ticketów (Wywołanie funkcji execute z tickets.js)
         if (commandName === 'panel-ticket') {
             return await tickets.execute(interaction);
         }
         return;
     }
 
-    // 2. Obsługa Menu, Przycisków i Modali (System Ticketów)
     try {
         await tickets.handleInteraction(interaction);
     } catch (err) {
