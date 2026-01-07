@@ -27,7 +27,7 @@ module.exports = {
                         .setColor(LUXURY_BLUE)
                         .setAuthor({ 
                             name: 'VAULT REP | SOCIAL ALERTS', 
-                            iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
+                            iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0' 
                         })
                         .setTitle(`🎬 NOWY FILM: ${latestItem.title || 'Kliknij by zobaczyć'}`)
                         .setURL(latestItem.link)
@@ -37,7 +37,7 @@ module.exports = {
                             `🔗 **Link do filmu:** [Kliknij tutaj](${latestItem.link})`
                         )
                         .setImage(thumbnail) // Miniaturka filmu jako duży obraz
-                        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png') // Logo bota jako mała ikonka
+                        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0') // Logo bota jako mała ikonka
                         .setFooter({ text: 'VAULT REP Security • System automatyczny', iconURL: client.user.displayAvatarURL() })
                         .setTimestamp();
 
