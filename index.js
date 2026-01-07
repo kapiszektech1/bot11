@@ -3,6 +3,7 @@ const { createWelcomeEmbed } = require('./powitania.js');
 const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
 const tickets = require('./tickets.js'); 
+const linkCommand = require('./link.js'); // DODANO: Import nowej komendy
 const http = require('http');
 require('dotenv').config();
 
@@ -67,6 +68,11 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'panel-ticket') {
             return await tickets.execute(interaction);
         }
+
+        // DODANO: Obsługa komendy /link
+        if (commandName === 'link') {
+            return await linkCommand.execute(interaction);
+        }
         return;
     }
 
@@ -107,4 +113,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login(process.env.TOKEN)
+client.login(process.env.TOKEN);
