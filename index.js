@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { createWelcomeEmbed } = require('./powitania.js');
 const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
-const tickets = require('./tickets.js'); // [TICKETY] Import systemu
+const tickets = require('./tickets.js'); 
 const http = require('http');
 require('dotenv').config();
 
@@ -43,24 +43,33 @@ client.once('ready', async () => {
             console.log(`Błąd zaproszeń dla: ${guild.name}`);
         }
     }
-
-    // [TICKETY] Automatyczne wysyłanie panelu po starcie
-    await tickets.sendTicketPanel(client);
+    // STATUS: Automatyczne wysyłanie panelu zostało USUNIĘTE.
 });
 
 // --- OBSŁUGA INTERAKCJI (KOMENDY, PRZYCISKI, MENU, MODALE) ---
 client.on('interactionCreate', async interaction => {
-    // 1. Obsługa komend Slash (np. /panel-kupony)
+    // 1. Obsługa komend Slash
     if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === panelKupony.name) {
-            await panelKupony.execute(interaction);
+        const { commandName } = interaction;
+
+        // Panel Kuponów
+        if (commandName === 'panel-kupony') {
+            return await panelKupony.execute(interaction);
+        }
+
+        // Panel Ticketów (Wywołanie funkcji execute z tickets.js)
+        if (commandName === 'panel-ticket') {
+            return await tickets.execute(interaction);
         }
         return;
     }
 
-    // 2. [TICKETY] Obsługa Menu, Przycisków i Modali
-    // Przekazujemy całą interakcję do pliku tickets.js
-    await tickets.handleInteraction(interaction);
+    // 2. Obsługa Menu, Przycisków i Modali (System Ticketów)
+    try {
+        await tickets.handleInteraction(interaction);
+    } catch (err) {
+        console.error('Błąd podczas obsługi interakcji ticketów:', err);
+    }
 });
 
 // --- POWITANIA I LOGI ZAPROSZEŃ ---
@@ -92,4 +101,5 @@ client.on('messageCreate', async (message) => {
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
     }
 });
+
 client.login(process.env.TOKEN)
