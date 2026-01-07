@@ -61,7 +61,7 @@ module.exports = {
                 .setColor(LUXURY_BLUE)
                 .setAuthor({ 
                     name: 'VAULT REP | TEST POWIADOMIENIA', 
-                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
+                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0' 
                 })
                 .setTitle(`💎 [PREVIEW] Ostatni film: ${latestItem.title || 'TikTok'}`)
                 .setURL(latestItem.link)
@@ -72,7 +72,7 @@ module.exports = {
                     `🔗 **URL:** ${latestItem.link}`
                 )
                 .setImage(thumbnail)
-                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
+                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0')
                 .setFooter({ text: 'Podgląd systemowy VAULT REP' })
                 .setTimestamp();
 
