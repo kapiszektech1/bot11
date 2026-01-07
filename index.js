@@ -3,7 +3,8 @@ const { createWelcomeEmbed } = require('./powitania.js');
 const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
 const tickets = require('./tickets.js'); 
-const linkCommand = require('./link.js'); // DODANO: Import nowej komendy
+const linkCommand = require('./link.js');
+const tiktok = require('./tiktokpowiadomienia.js'); // DODANO: Import systemu TikTok
 const http = require('http');
 require('dotenv').config();
 
@@ -44,6 +45,11 @@ client.once('ready', async () => {
         }],
         status: 'online',
     });
+
+    // --- AUTOMATYCZNE SPRAWDZANIE TIKTOKA (Co 1 minuta) ---
+    setInterval(() => {
+        tiktok.checkTikTok(client);
+    }, 60000); 
     
     // Inicjalizacja zaproszeń
     for (const [id, guild] of client.guilds.cache) {
@@ -69,7 +75,6 @@ client.on('interactionCreate', async interaction => {
             return await tickets.execute(interaction);
         }
 
-        // DODANO: Obsługa komendy /link
         if (commandName === 'link') {
             return await linkCommand.execute(interaction);
         }
@@ -105,12 +110,23 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// --- TEST POWITAŃ ---
+// --- KOMENDY TEKSTOWE (!) ---
 client.on('messageCreate', async (message) => {
-    if (message.content === '!powitania-test' && !message.author.bot) {
+    if (message.author.bot) return;
+
+    // Test powitań
+    if (message.content === '!powitania-test') {
         const embed = createWelcomeEmbed(message.member);
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
     }
+
+    // Test TikToka (Tylko dla Zarządu)
+    if (message.content === '!powiadomienia-test') {
+        const allowedRoles = ['1457675858537091221', '1457675858553864274'];
+        if (message.member.roles.cache.some(r => allowedRoles.includes(r.id))) {
+            await tiktok.sendTest(client, message.channel);
+        }
+    }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN)
