@@ -1,7 +1,8 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { createWelcomeEmbed } = require('./powitania.js');
 const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
-const panelKupony = require('./panel-kupony.js'); // Import nowego pliku
+const panelKupony = require('./panel-kupony.js');
+const tickets = require('./tickets.js'); // [TICKETY] Import systemu
 const http = require('http');
 require('dotenv').config();
 
@@ -25,7 +26,6 @@ const client = new Client({
     ]
 });
 
-// KONFIGURACJA KANAŁÓW VAULT REP
 const WELCOME_CHANNEL_ID = '1457675865524801568'; 
 const INVITE_LOG_CHANNEL_ID = '1457675879219200033'; 
 
@@ -34,35 +34,43 @@ const invites = new Collection();
 client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
+    // Inicjalizacja zaproszeń
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
             invites.set(guild.id, new Collection(guildInvites.map(inv => [inv.code, inv.uses])));
         } catch (err) {
-            console.log(`Błąd pobierania zaproszeń dla: ${guild.name}`);
+            console.log(`Błąd zaproszeń dla: ${guild.name}`);
         }
     }
+
+    // [TICKETY] Automatyczne wysyłanie panelu po starcie
+    await tickets.sendTicketPanel(client);
 });
 
-// --- OBSŁUGA KOMEND SLASH ---
+// --- OBSŁUGA INTERAKCJI (KOMENDY, PRZYCISKI, MENU, MODALE) ---
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    // Wywołanie panelu kuponów z osobnego pliku
-    if (interaction.commandName === panelKupony.name) {
-        await panelKupony.execute(interaction);
+    // 1. Obsługa komend Slash (np. /panel-kupony)
+    if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === panelKupony.name) {
+            await panelKupony.execute(interaction);
+        }
+        return;
     }
+
+    // 2. [TICKETY] Obsługa Menu, Przycisków i Modali
+    // Przekazujemy całą interakcję do pliku tickets.js
+    await tickets.handleInteraction(interaction);
 });
 
+// --- POWITANIA I LOGI ZAPROSZEŃ ---
 client.on('guildMemberAdd', async (member) => {
-    // 1. POWITANIE
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
         const welcomeEmbed = createWelcomeEmbed(member);
         await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
     }
 
-    // 2. LOGI ZAPROSZEŃ
     const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
     if (logChannel) {
         const newInvites = await member.guild.invites.fetch().catch(() => new Collection());
@@ -77,11 +85,11 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
+// --- TEST POWITAŃ ---
 client.on('messageCreate', async (message) => {
     if (message.content === '!powitania-test' && !message.author.bot) {
         const embed = createWelcomeEmbed(message.member);
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
     }
 });
-
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN)
