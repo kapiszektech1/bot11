@@ -5,38 +5,44 @@ const parser = new Parser();
 // --- KONFIGURACJA DLA 02,03 ---
 const TIKTOK_RSS_URL = 'https://rss.app/feeds/mjKROzz3jctsnMOp.xml'; 
 const CHANNEL_ID = '1457675907543334973';
+const LUXURY_BLUE = 0x00008B; // Ciemny niebieski zgodny z Vault Rep
 let lastVideo = ""; 
 
 module.exports = {
-    // Automatyczne sprawdzanie (wywoływane co 1 minutę przez index.js)
     checkTikTok: async (client) => {
         try {
             const feed = await parser.parseURL(TIKTOK_RSS_URL);
             if (!feed.items.length) return;
             const latestItem = feed.items[0];
 
-            // Sprawdzamy, czy link jest inny niż ostatnio zapamiętany
             if (latestItem.link !== lastVideo) {
-                // Warunek lastVideo !== "" zapobiega wysyłaniu powiadomienia o starym filmie przy restarcie bota
                 if (lastVideo !== "") { 
                     const channel = await client.channels.fetch(CHANNEL_ID);
                     if (!channel) return;
 
+                    // Wyciąganie miniatury z treści RSS (jeśli dostępna)
+                    const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
+
                     const embed = new EmbedBuilder()
-                        .setColor(0xFF0050)
+                        .setColor(LUXURY_BLUE)
                         .setAuthor({ 
-                            name: 'NOWY FILM NA TIKTOKU!', 
-                            iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0' 
+                            name: 'VAULT REP | SOCIAL ALERTS', 
+                            iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
                         })
-                        .setTitle(latestItem.title || '🚀 Nowy film od 4xhm!')
+                        .setTitle(`🎬 NOWY FILM: ${latestItem.title || 'Kliknij by zobaczyć'}`)
                         .setURL(latestItem.link)
-                        .setDescription(`**Wleciał nowy film! Kliknij w link powyżej, aby go obejrzeć.**\n\n${latestItem.link}`)
-                        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
+                        .setDescription(
+                            `🚀 **Właśnie wleciał nowy materiał!**\n\n` +
+                            `Bądź na bieżąco z najnowszymi dropami i informacjami ze świata VAULT REP.\n\n` +
+                            `🔗 **Link do filmu:** [Kliknij tutaj](${latestItem.link})`
+                        )
+                        .setImage(thumbnail) // Miniaturka filmu jako duży obraz
+                        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png') // Logo bota jako mała ikonka
+                        .setFooter({ text: 'VAULT REP Security • System automatyczny', iconURL: client.user.displayAvatarURL() })
                         .setTimestamp();
 
-                    await channel.send({ embeds: [embed] });
+                    await channel.send({ content: '🔔 **Nowa aktywność na TikToku!**', embeds: [embed] });
                 }
-                // Aktualizujemy ostatni film w pamięci bota
                 lastVideo = latestItem.link;
             }
         } catch (error) {
@@ -44,29 +50,35 @@ module.exports = {
         }
     },
 
-    // Komenda testowa !powiadomienia-test
     sendTest: async (client, channel) => {
         try {
             const feed = await parser.parseURL(TIKTOK_RSS_URL);
             if (!feed.items.length) return channel.send("❌ Nie znaleziono filmów w RSS.");
             const latestItem = feed.items[0];
+            const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
 
             const embed = new EmbedBuilder()
-                .setColor(0xFF0050)
+                .setColor(LUXURY_BLUE)
                 .setAuthor({ 
-                    name: 'TEST POWIADOMIENIA', 
-                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png' 
+                    name: 'VAULT REP | TEST POWIADOMIENIA', 
+                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
                 })
-                .setTitle(`[TEST] Ostatni film: ${latestItem.title || 'Kliknij tutaj'}`)
+                .setTitle(`💎 [PREVIEW] Ostatni film: ${latestItem.title || 'TikTok'}`)
                 .setURL(latestItem.link)
-                .setDescription(`Tak będzie wyglądać powiadomienie po wrzuceniu nowego filmu:\n\n${latestItem.link}`)
+                .setDescription(
+                    `Tak prezentuje się estetyczny panel powiadomień:\n\n` +
+                    `📺 **Status:** Online\n` +
+                    `✨ **Styl:** Dark Blue\n\n` +
+                    `🔗 **URL:** ${latestItem.link}`
+                )
+                .setImage(thumbnail)
                 .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
-                .setFooter({ text: 'VAULT REP Social Alerts' })
+                .setFooter({ text: 'Podgląd systemowy VAULT REP' })
                 .setTimestamp();
 
             await channel.send({ embeds: [embed] });
         } catch (error) {
-            channel.send("❌ Błąd testu. Sprawdź czy link RSS jest poprawny.");
+            channel.send("❌ Błąd testu.");
             console.error(error);
         }
     }
