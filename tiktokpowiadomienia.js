@@ -6,7 +6,8 @@ const parser = new Parser();
 const TIKTOK_RSS_URL = 'https://rss.app/feeds/mjKROzz3jctsnMOp.xml'; 
 const CHANNEL_ID = '1457675907543334973';
 const LUXURY_BLUE = 0x00008B; 
-let lastVideo = ""; 
+// Zmieniamy na dowolny tekst, aby bot przy pierwszym sprawdzeniu uznał film z RSS za "nowy"
+let lastVideo = "wymuszenie_wysylki"; 
 
 module.exports = {
     checkTikTok: async (client) => {
@@ -16,19 +17,12 @@ module.exports = {
             
             const latestItem = feed.items[0];
 
-            // Pierwsze uruchomienie bota - zapisujemy film, by nie spamować starymi
-            if (lastVideo === "") {
-                lastVideo = latestItem.link;
-                console.log(`[TikTok] System zainicjowany. Ostatni film: ${lastVideo}`);
-                return;
-            }
-
-            // Jeśli znaleziono NOWY film (link różni się od zapisanego)
+            // Jeśli link z RSS jest inny niż "wymuszenie_wysylki" lub poprzedni link
             if (latestItem.link !== lastVideo) {
                 const channel = await client.channels.fetch(CHANNEL_ID);
                 if (!channel) return;
 
-                // Wyciąganie miniatury z treści RSS
+                // Wyciąganie miniatury filmu z zawartości RSS
                 const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
 
                 const embed = new EmbedBuilder()
@@ -44,15 +38,17 @@ module.exports = {
                         `Bądź na bieżąco z najnowszymi dropami i informacjami ze świata VAULT REP.\n\n` +
                         `🔗 **Link do filmu:** [Kliknij tutaj](${latestItem.link})`
                     )
-                    .setImage(thumbnail) 
+                    .setImage(thumbnail) // Miniatura filmu jako główny obraz
                     .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
                     .setFooter({ text: 'VAULT REP Security • System automatyczny' })
                     .setTimestamp();
 
+                // Wysyłamy wiadomość
                 await channel.send({ content: '🔔 **Nowa aktywność na TikToku!**', embeds: [embed] });
                 
-                // Aktualizujemy pamięć
+                // Zapisujemy link, żeby nie wysłać tego samego filmu ponownie
                 lastVideo = latestItem.link;
+                console.log(`[TikTok] Wysłano powiadomienie: ${lastVideo}`);
             }
         } catch (error) {
             console.error('Błąd sprawdzania TikToka:', error);
