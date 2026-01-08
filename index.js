@@ -4,8 +4,9 @@ const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
 const tickets = require('./tickets.js'); 
 const linkCommand = require('./link.js');
-const elitePanel = require('./elitepanel.js'); // DODANO: Import panelu Elite
+const elitePanel = require('./elitepanel.js'); 
 const tiktok = require('./tiktokpowiadomienia.js');
+const pingOsoby = require('./pingosoby.js'); // DODANO: Import systemu pingowania po weryfikacji
 const http = require('http');
 require('dotenv').config();
 
@@ -34,7 +35,6 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-// Zmieniono na clientReady, aby uniknąć DeprecationWarning
 client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
@@ -64,27 +64,15 @@ client.once('ready', async () => {
     }
 });
 
-// --- OBSŁUGA INTERAKCJI (KOMENDY, PRZYCISKI, MENU, MODALE) ---
+// --- OBSŁUGA INTERAKCJI ---
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
-        if (commandName === 'panel-kupony') {
-            return await panelKupony.execute(interaction);
-        }
-
-        if (commandName === 'panel-ticket') {
-            return await tickets.execute(interaction);
-        }
-
-        if (commandName === 'link') {
-            return await linkCommand.execute(interaction);
-        }
-
-        // DODANO: Obsługa komendy elite-panel
-        if (commandName === 'elite-panel') {
-            return await elitePanel.execute(interaction);
-        }
+        if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
+        if (commandName === 'panel-ticket') return await tickets.execute(interaction);
+        if (commandName === 'link') return await linkCommand.execute(interaction);
+        if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
         return;
     }
 
@@ -93,6 +81,11 @@ client.on('interactionCreate', async interaction => {
     } catch (err) {
         console.error('Błąd podczas obsługi interakcji ticketów:', err);
     }
+});
+
+// --- SYSTEM PINGOWANIA PO WERYFIKACJI ---
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+    await pingOsoby.handleRolePing(oldMember, newMember);
 });
 
 // --- POWITANIA I LOGI ZAPROSZEŃ ---
@@ -117,17 +110,15 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// --- KOMENDY TEKSTOWE (!) ---
+// --- KOMENDY TEKSTOWE ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // Test powitań
     if (message.content === '!powitania-test') {
         const embed = createWelcomeEmbed(message.member);
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
     }
 
-    // Test TikToka (Tylko dla Zarządu)
     if (message.content === '!powiadomienia-test') {
         const allowedRoles = ['1457675858537091221', '1457675858553864274'];
         if (message.member.roles.cache.some(r => allowedRoles.includes(r.id))) {
