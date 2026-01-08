@@ -1,7 +1,4 @@
 // --- PLIK: pingosoby.js ---
-const { Collection } = require('discord.js');
-
-// Konfiguracja dla 02,03
 const CONFIG = {
     VERIFIED_ROLE_ID: '1457675858486755375',
     TARGET_CHANNELS: [
@@ -14,32 +11,30 @@ const CONFIG = {
 
 module.exports = {
     handleRolePing: async (oldMember, newMember) => {
-        // Sprawdzamy, czy użytkownik nie miał rangi, a teraz ją otrzymał
         const hadRole = oldMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
         const hasRole = newMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
 
+        // Reaguj tylko gdy ranga została DODANA
         if (!hadRole && hasRole) {
-            console.log(`[VAULT REP] Nowa weryfikacja: ${newMember.user.tag}. Rozpoczynam kierowanie na kanały.`);
+            console.log(`[VAULT REP] Wykryto nadanie rangi dla ${newMember.user.tag}. Pinguję...`);
 
             for (const channelId of CONFIG.TARGET_CHANNELS) {
                 try {
                     const channel = await newMember.guild.channels.fetch(channelId);
                     if (!channel) continue;
 
-                    // Wysyłamy samego pinga
+                    // Wysyłamy ping
                     const pingMessage = await channel.send(`${newMember}`);
-
-                    // Usuwamy po 3 sekundach
-                    setTimeout(async () => {
-                        try {
-                            await pingMessage.delete();
-                        } catch (err) {
-                            // Ignorujemy błąd, jeśli wiadomość już została usunięta
-                        }
+                    
+                    // Wymuszone usuwanie z obsługą błędów
+                    setTimeout(() => {
+                        pingMessage.delete()
+                            .then(() => console.log(`[VAULT REP] Usunięto ping na kanale ${channelId}`))
+                            .catch(err => console.error(`[VAULT REP] Nie udało się usunąć wiadomości: ${err.message}`));
                     }, CONFIG.DELETE_AFTER_MS);
 
                 } catch (error) {
-                    console.error(`Błąd podczas pingowania na kanale ${channelId}:`, error);
+                    console.error(`[VAULT REP] Błąd na kanale ${channelId}:`, error);
                 }
             }
         }
