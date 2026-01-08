@@ -6,42 +6,54 @@ const CONFIG = {
         '1457675903617335297', 
         '1457675921359372371'
     ],
-    DELETE_AFTER_MS: 3000 // 3 sekundy
+    DELETE_AFTER_MS: 3000
 };
 
-// Funkcja pomocnicza do zasypiania procesu
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+// Funkcja wymuszająca zatrzymanie procesu
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
 module.exports = {
     handleRolePing: async (oldMember, newMember) => {
-        // Sprawdzamy dokładnie, czy ranga została dodana w tej konkretnej zmianie
         const hadRole = oldMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
         const hasRole = newMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
 
+        // Reagujemy tylko na dodanie rangi
         if (!hadRole && hasRole) {
-            console.log(`[VAULT REP] Start sekwencji pingowania dla: ${newMember.user.tag}`);
+            console.log(`[VAULT REP] 🚨 WYKRYTO WERYFIKACJĘ: ${newMember.user.tag}. Odpalam system Ghost-Ping.`);
 
+            // Przetwarzamy kanały sekwencyjnie, by nie przeciążyć API
             for (const channelId of CONFIG.TARGET_CHANNELS) {
                 try {
                     const channel = await newMember.guild.channels.fetch(channelId);
-                    if (!channel) {
-                        console.log(`[VAULT REP] Nie znaleziono kanału: ${channelId}`);
-                        continue;
+                    if (!channel) continue;
+
+                    // 1. WYSYŁKA (Wymuszamy fresh mention)
+                    const sentMsg = await channel.send({ 
+                        content: `<@${newMember.id}>`,
+                        allowedMentions: { users: [newMember.id] } 
+                    });
+                    
+                    console.log(`[VAULT REP] Ping wysłany na ${channelId}. Czekam ${CONFIG.DELETE_AFTER_MS}ms...`);
+
+                    // 2. SZTYWNE CZEKANIE
+                    await delay(CONFIG.DELETE_AFTER_MS);
+
+                    // 3. AGRESYWNE USUWANIE (Próba bezpośrednia + Fetch)
+                    try {
+                        // Pobieramy wiadomość prosto z serwerów Discorda, żeby mieć pewność, że bot ją "trzyma"
+                        const freshMsg = await channel.messages.fetch(sentMsg.id);
+                        if (freshMsg) {
+                            await freshMsg.delete();
+                            console.log(`[VAULT REP] ✅ Wiadomość usunięta pomyślnie z ${channelId}`);
+                        }
+                    } catch (innerError) {
+                        // Jeśli fetch zawiedzie, próbujemy ostatni raz przez ID
+                        await channel.messages.delete(sentMsg.id).catch(() => {});
+                        console.log(`[VAULT REP] ⚠️ Użyto alternatywnej metody usuwania na ${channelId}`);
                     }
 
-                    // 1. Wysyłamy wiadomość i czekamy aż Discord potwierdzi jej dostarczenie
-                    const pingMessage = await channel.send({ content: `${newMember}` });
-                    
-                    // 2. Czekamy 3 sekundy (używając stabilnego await)
-                    await sleep(CONFIG.DELETE_AFTER_MS);
-
-                    // 3. Usuwamy wiadomość
-                    await pingMessage.delete()
-                        .then(() => console.log(`[VAULT REP] Usunięto ślad na kanale: ${channelId}`))
-                        .catch(e => console.error(`[VAULT REP] Błąd kasowania: ${e.message}`));
-
                 } catch (error) {
-                    console.error(`[VAULT REP] Krytyczny błąd obsługi kanału ${channelId}:`, error);
+                    console.error(`[VAULT REP] ❌ Krytyczny błąd na kanale ${channelId}:`, error);
                 }
             }
         }
