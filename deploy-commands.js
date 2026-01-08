@@ -15,7 +15,7 @@ const commands = [
         .setDescription('Wysyła estetyczny panel ticketów VAULT REP')
         .setDMPermission(false),
 
-    // 3. [NOWA] Komenda Link
+    // 3. Komenda Link
     new SlashCommandBuilder()
         .setName('link')
         .setDescription('Wysyła link do przedmiotów z informacją o bonusach')
@@ -23,6 +23,12 @@ const commands = [
             option.setName('url')
                 .setDescription('Wklej tutaj link do przedmiotów')
                 .setRequired(true))
+        .setDMPermission(false),
+
+    // 4. [NOWA] Komenda Elite Panel
+    new SlashCommandBuilder()
+        .setName('elite-panel')
+        .setDescription('Wysyła luksusowy panel informacyjny sekcji Elite (Tylko Zarząd)')
         .setDMPermission(false)
 ].map(command => command.toJSON());
 
@@ -34,7 +40,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
         console.log('--- VAULT REP: Rozpoczynam odświeżanie komend Slash ---');
 
-        // Rejestracja dla konkretnego serwera (ID bota i ID serwera zachowane)
+        // Rejestracja dla konkretnego serwera
         await rest.put(
             Routes.applicationGuildCommands(
                 '1458124283707523275', // ID BOTA
@@ -43,7 +49,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
             { body: commands },
         );
 
-        console.log('✅ VAULT REP: Zarejestrowano pomyślnie: /panel-kupony, /panel-ticket oraz /link');
+        console.log('✅ VAULT REP: Zarejestrowano pomyślnie: /panel-kupony, /panel-ticket, /link oraz /elite-panel');
     } catch (error) {
         console.error('❌ Błąd rejestracji:', error);
     }
