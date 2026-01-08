@@ -4,7 +4,8 @@ const { createLuxuryInviteEmbed } = require('./zaproszenia.js');
 const panelKupony = require('./panel-kupony.js');
 const tickets = require('./tickets.js'); 
 const linkCommand = require('./link.js');
-const tiktok = require('./tiktokpowiadomienia.js'); // DODANO: Import systemu TikTok
+const elitePanel = require('./elitepanel.js'); // DODANO: Import panelu Elite
+const tiktok = require('./tiktokpowiadomienia.js');
 const http = require('http');
 require('dotenv').config();
 
@@ -33,6 +34,7 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
+// Zmieniono na clientReady, aby uniknąć DeprecationWarning
 client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
@@ -77,6 +79,11 @@ client.on('interactionCreate', async interaction => {
 
         if (commandName === 'link') {
             return await linkCommand.execute(interaction);
+        }
+
+        // DODANO: Obsługa komendy elite-panel
+        if (commandName === 'elite-panel') {
+            return await elitePanel.execute(interaction);
         }
         return;
     }
@@ -129,4 +136,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login(process.env.TOKEN)
+client.login(process.env.TOKEN);
