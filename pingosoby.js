@@ -9,7 +9,6 @@ const CONFIG = {
     DELETE_AFTER_MS: 3000
 };
 
-// Funkcja wymuszająca zatrzymanie procesu
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 module.exports = {
@@ -17,43 +16,38 @@ module.exports = {
         const hadRole = oldMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
         const hasRole = newMember.roles.cache.has(CONFIG.VERIFIED_ROLE_ID);
 
-        // Reagujemy tylko na dodanie rangi
         if (!hadRole && hasRole) {
-            console.log(`[VAULT REP] 🚨 WYKRYTO WERYFIKACJĘ: ${newMember.user.tag}. Odpalam system Ghost-Ping.`);
+            console.log(`[VAULT REP] 🚨 SYSTEM GHOST-PING: ${newMember.user.tag}`);
 
-            // Przetwarzamy kanały sekwencyjnie, by nie przeciążyć API
             for (const channelId of CONFIG.TARGET_CHANNELS) {
                 try {
                     const channel = await newMember.guild.channels.fetch(channelId);
                     if (!channel) continue;
 
-                    // 1. WYSYŁKA (Wymuszamy fresh mention)
-                    const sentMsg = await channel.send({ 
-                        content: `<@${newMember.id}>`,
-                        allowedMentions: { users: [newMember.id] } 
-                    });
-                    
-                    console.log(`[VAULT REP] Ping wysłany na ${channelId}. Czekam ${CONFIG.DELETE_AFTER_MS}ms...`);
+                    // 1. WYSYŁKA PINGA
+                    const sentMsg = await channel.send({ content: `<@${newMember.id}>` });
+                    console.log(`[VAULT REP] Ping wysłany na ${channelId}`);
 
-                    // 2. SZTYWNE CZEKANIE
+                    // 2. SZTYWNE OCZEKIWANIE
                     await delay(CONFIG.DELETE_AFTER_MS);
 
-                    // 3. AGRESYWNE USUWANIE (Próba bezpośrednia + Fetch)
+                    // 3. NAJMOCNIEJSZA METODA: Edycja (wymusza odświeżenie cache) + Usunięcie
                     try {
-                        // Pobieramy wiadomość prosto z serwerów Discorda, żeby mieć pewność, że bot ją "trzyma"
                         const freshMsg = await channel.messages.fetch(sentMsg.id);
                         if (freshMsg) {
+                            // Edytujemy na pustą kropkę (to "budzi" aplikację Discorda)
+                            await freshMsg.edit({ content: '.' });
+                            // Natychmiast kasujemy
                             await freshMsg.delete();
-                            console.log(`[VAULT REP] ✅ Wiadomość usunięta pomyślnie z ${channelId}`);
+                            console.log(`[VAULT REP] ✅ WYMUSZONO USUNIĘCIE NA ${channelId}`);
                         }
-                    } catch (innerError) {
-                        // Jeśli fetch zawiedzie, próbujemy ostatni raz przez ID
+                    } catch (err) {
+                        // Ostatnia deska ratunku - bezpośrednie kasowanie przez ID
                         await channel.messages.delete(sentMsg.id).catch(() => {});
-                        console.log(`[VAULT REP] ⚠️ Użyto alternatywnej metody usuwania na ${channelId}`);
                     }
 
                 } catch (error) {
-                    console.error(`[VAULT REP] ❌ Krytyczny błąd na kanale ${channelId}:`, error);
+                    console.error(`[VAULT REP] ❌ Błąd kanału ${channelId}:`, error);
                 }
             }
         }
