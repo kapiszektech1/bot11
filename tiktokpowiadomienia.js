@@ -5,44 +5,53 @@ const parser = new Parser();
 // --- KONFIGURACJA DLA 02,03 ---
 const TIKTOK_RSS_URL = 'https://rss.app/feeds/mjKROzz3jctsnMOp.xml'; 
 const CHANNEL_ID = '1457675907543334973';
-const LUXURY_BLUE = 0x00008B; // Ciemny niebieski zgodny z Vault Rep
+const LUXURY_BLUE = 0x00008B; 
 let lastVideo = ""; 
 
 module.exports = {
     checkTikTok: async (client) => {
         try {
             const feed = await parser.parseURL(TIKTOK_RSS_URL);
-            if (!feed.items.length) return;
+            if (!feed || !feed.items.length) return;
+            
             const latestItem = feed.items[0];
 
+            // Pierwsze uruchomienie bota - zapisujemy film, by nie spamować starymi
+            if (lastVideo === "") {
+                lastVideo = latestItem.link;
+                console.log(`[TikTok] System zainicjowany. Ostatni film: ${lastVideo}`);
+                return;
+            }
+
+            // Jeśli znaleziono NOWY film (link różni się od zapisanego)
             if (latestItem.link !== lastVideo) {
-                if (lastVideo !== "") { 
-                    const channel = await client.channels.fetch(CHANNEL_ID);
-                    if (!channel) return;
+                const channel = await client.channels.fetch(CHANNEL_ID);
+                if (!channel) return;
 
-                    // Wyciąganie miniatury z treści RSS (jeśli dostępna)
-                    const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
+                // Wyciąganie miniatury z treści RSS
+                const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
 
-                    const embed = new EmbedBuilder()
-                        .setColor(LUXURY_BLUE)
-                        .setAuthor({ 
-                            name: 'VAULT REP | SOCIAL ALERTS', 
-                            iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0' 
-                        })
-                        .setTitle(`🎬 NOWY FILM: ${latestItem.title || 'Kliknij by zobaczyć'}`)
-                        .setURL(latestItem.link)
-                        .setDescription(
-                            `🚀 **Właśnie wleciał nowy materiał!**\n\n` +
-                            `Bądź na bieżąco z najnowszymi dropami i informacjami ze świata VAULT REP.\n\n` +
-                            `🔗 **Link do filmu:** [Kliknij tutaj](${latestItem.link})`
-                        )
-                        .setImage(thumbnail) // Miniaturka filmu jako duży obraz
-                        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0') // Logo bota jako mała ikonka
-                        .setFooter({ text: 'VAULT REP Security • System automatyczny', iconURL: client.user.displayAvatarURL() })
-                        .setTimestamp();
+                const embed = new EmbedBuilder()
+                    .setColor(LUXURY_BLUE)
+                    .setAuthor({ 
+                        name: 'VAULT REP | SOCIAL ALERTS', 
+                        iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
+                    })
+                    .setTitle(`🎬 NOWY FILM: ${latestItem.title || 'Kliknij by zobaczyć'}`)
+                    .setURL(latestItem.link)
+                    .setDescription(
+                        `🚀 **Właśnie wleciał nowy materiał!**\n\n` +
+                        `Bądź na bieżąco z najnowszymi dropami i informacjami ze świata VAULT REP.\n\n` +
+                        `🔗 **Link do filmu:** [Kliknij tutaj](${latestItem.link})`
+                    )
+                    .setImage(thumbnail) 
+                    .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
+                    .setFooter({ text: 'VAULT REP Security • System automatyczny' })
+                    .setTimestamp();
 
-                    await channel.send({ content: '🔔 **Nowa aktywność na TikToku!**', embeds: [embed] });
-                }
+                await channel.send({ content: '🔔 **Nowa aktywność na TikToku!**', embeds: [embed] });
+                
+                // Aktualizujemy pamięć
                 lastVideo = latestItem.link;
             }
         } catch (error) {
@@ -53,7 +62,7 @@ module.exports = {
     sendTest: async (client, channel) => {
         try {
             const feed = await parser.parseURL(TIKTOK_RSS_URL);
-            if (!feed.items.length) return channel.send("❌ Nie znaleziono filmów w RSS.");
+            if (!feed || !feed.items.length) return channel.send("❌ Nie znaleziono filmów w RSS.");
             const latestItem = feed.items[0];
             const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
 
@@ -61,18 +70,18 @@ module.exports = {
                 .setColor(LUXURY_BLUE)
                 .setAuthor({ 
                     name: 'VAULT REP | TEST POWIADOMIENIA', 
-                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0' 
+                    iconURL: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png' 
                 })
                 .setTitle(`💎 [PREVIEW] Ostatni film: ${latestItem.title || 'TikTok'}`)
                 .setURL(latestItem.link)
                 .setDescription(
                     `Tak prezentuje się estetyczny panel powiadomień:\n\n` +
                     `📺 **Status:** Online\n` +
-                    `✨ **Styl:** Dark Blue\n\n` +
+                    `✨ **Styl:** Luxury Dark Blue\n\n` +
                     `🔗 **URL:** ${latestItem.link}`
                 )
                 .setImage(thumbnail)
-                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png?ex=695fb447&is=695e62c7&hm=87300e39506eead953542c93702a6bb61c48b5aa48b05ac5538dc5bc922148b0')
+                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png')
                 .setFooter({ text: 'Podgląd systemowy VAULT REP' })
                 .setTimestamp();
 
