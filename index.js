@@ -7,7 +7,8 @@ const linkCommand = require('./link.js');
 const elitePanel = require('./elitepanel.js'); 
 const tiktok = require('./tiktokpowiadomienia.js');
 const pingOsoby = require('./pingosoby.js');
-const chatMod = require('./ograniczaniachat.js'); // DODANO: System ograniczeń czatu
+const chatMod = require('./ograniczaniachat.js');
+const moderacja = require('./moderacja.js'); // DODANO: Import systemu moderacji (Ban/Kick/Mute/Warn)
 const http = require('http');
 require('dotenv').config();
 
@@ -36,11 +37,9 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-// Zmieniono 'ready' na 'clientReady' aby usunąć ostrzeżenie z logów
 client.once('clientReady', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
-    // --- STATUS STREAMOWANIA ---
     client.user.setPresence({
         activities: [{ 
             name: 'REP VAULT | 410$ BIO', 
@@ -50,12 +49,10 @@ client.once('clientReady', async () => {
         status: 'online',
     });
 
-    // --- AUTOMATYCZNE SPRAWDZANIE TIKTOKA (Co 1 minuta) ---
     setInterval(() => {
         tiktok.checkTikTok(client);
     }, 60000); 
     
-    // Inicjalizacja zaproszeń
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
@@ -66,15 +63,23 @@ client.once('clientReady', async () => {
     }
 });
 
-// --- OBSŁUGA INTERAKCJI ---
+// --- OBSŁUGA INTERAKCJI (KOMENDY SLASH) ---
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
+        // Podstawowe panele i linki
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
         if (commandName === 'panel-ticket') return await tickets.execute(interaction);
         if (commandName === 'link') return await linkCommand.execute(interaction);
         if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
+
+        // NOWE: System moderacji (Ban, Kick, Mute, Warn)
+        const modCommands = ['ban', 'kick', 'mute', 'warn'];
+        if (modCommands.includes(commandName)) {
+            return await moderacja.execute(interaction);
+        }
+        
         return;
     }
 
@@ -116,10 +121,9 @@ client.on('guildMemberAdd', async (member) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // MODERACJA CZATU (Najpierw sprawdzamy zakazane słowa)
+    // Moderacja automatyczna (zakazane słowa na wybranym kanale)
     await chatMod.handleChatModeration(message);
 
-    // TESTY SYSTEMÓW
     if (message.content === '!powitania-test') {
         const embed = createWelcomeEmbed(message.member);
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
