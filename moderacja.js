@@ -9,7 +9,6 @@ const CONFIG = {
     }
 };
 
-// Funkcja pomocnicza do zamiany tekstu (1h, 1d) na milisekundy
 function parseDuration(durationStr) {
     const match = durationStr.match(/^(\d+)([smhd])$/);
     if (!match) return null;
@@ -53,6 +52,10 @@ module.exports = {
     ],
 
     async execute(interaction) {
+        // --- STATUS: UNKNOWN INTERACTION FIX ---
+        // Informujemy Discorda, że przetwarzamy dane, co daje nam 15 minut na odpowiedź.
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] }).catch(() => {});
+
         const { commandName, options, member, guild } = interaction;
         const target = options.getMember('osoba');
         const reason = options.getString('powod');
@@ -63,10 +66,20 @@ module.exports = {
 
         if ((['ban', 'kick'].includes(commandName) && !canAdmin) || 
             (['mute', 'warn'].includes(commandName) && !canMod)) {
-            return interaction.reply({ content: '❌ Nie posiadasz wystarczających uprawnień!', flags: [MessageFlags.Ephemeral] });
+            return interaction.editReply({ content: '❌ Nie posiadasz wystarczających uprawnień!' });
         }
 
-        if (!target) return interaction.reply({ content: '❌ Nie ma takiej osoby na serwerze.', flags: [MessageFlags.Ephemeral] });
+        if (!target) return interaction.editReply({ content: '❌ Nie znaleziono użytkownika na serwerze.' });
+
+        // --- STATUS: HIERARCHY PROTECTION ---
+        // Sprawdza czy bot może technicznie ukarać tę osobę
+        if (target.id === guild.ownerId) {
+            return interaction.editReply({ content: '❌ Nie możesz ukarać Właściciela serwera!' });
+        }
+        
+        if (target.roles.highest.position >= guild.members.me.roles.highest.position) {
+            return interaction.editReply({ content: '❌ Moja ranga jest zbyt niska, aby ukarać tę osobę.' });
+        }
 
         const logEmbed = new EmbedBuilder()
             .setColor(CONFIG.VAULT_BLUE)
@@ -103,7 +116,7 @@ module.exports = {
             if (commandName === 'mute') {
                 const timeInput = options.getString('czas');
                 const durationMs = parseDuration(timeInput);
-                if (!durationMs) return interaction.reply({ content: '❌ Nieprawidłowy format czasu! (np. 10m, 2h, 1d)', flags: [MessageFlags.Ephemeral] });
+                if (!durationMs) return interaction.editReply({ content: '❌ Nieprawidłowy format czasu! (np. 10m, 2h, 1d)' });
 
                 dmEmbed.setTitle(`🔇 Zostałeś wyciszony na ${guild.name}`).addFields(
                     { name: 'Czas', value: timeInput, inline: true },
@@ -131,11 +144,11 @@ module.exports = {
             }
 
             if (logChannel) await logChannel.send({ embeds: [logEmbed] });
-            await interaction.reply({ content: `✅ Akcja **${commandName}** wykonana pomyślnie.`, flags: [MessageFlags.Ephemeral] });
+            await interaction.editReply({ content: `✅ Akcja **${commandName}** wykonana pomyślnie.` });
 
         } catch (err) {
-            console.error(err);
-            await interaction.reply({ content: '❌ Wystąpił błąd podczas wykonywania akcji.', flags: [MessageFlags.Ephemeral] });
+            console.error('[MODERACJA BŁĄD]', err);
+            await interaction.editReply({ content: '❌ Wystąpił błąd krytyczny podczas akcji. Sprawdź logi konsoli.' }).catch(() => {});
         }
     }
 };
