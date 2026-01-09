@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,18 +12,20 @@ module.exports = {
         const PANEL_IMAGE = 'https://cdn.discordapp.com/attachments/1458122275973890222/1458827828115275982/image.png?ex=69610ec9&is=695fbd49&hm=4f1d266af7fd2509eeb324edd2277436be15d2ccbf0cffe1d26fda8760c96d23';
         const VAULT_BLUE = 0x00008B;
 
-        // Sprawdzenie uprawnień
+        // 1. Natychmiastowe "odroczenie" odpowiedzi, aby uniknąć błędu Unknown Interaction
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+        // 2. Sprawdzenie uprawnień
         if (!interaction.member.roles.cache.has(ELITE_ROLE_ID)) {
-            return interaction.reply({ 
-                content: '> ❌ Ta funkcja jest zarezerwowana wyłącznie dla wyższej administracji!', 
-                ephemeral: true 
+            return interaction.editReply({ 
+                content: '> ❌ Ta funkcja jest zarezerwowana wyłącznie dla wyższej administracji!'
             });
         }
 
         const eliteEmbed = new EmbedBuilder()
             .setColor(VAULT_BLUE)
             .setAuthor({ 
-                name: 'VAULT REP | RANGA ELITE', 
+                name: 'VAULT REP | PRESTIGE PROGRAM', 
                 iconURL: PANEL_IMAGE 
             })
             .setTitle('💎 RANGA ELITE – TWOJA PRZEPUSTKA DO NAJLEPSZYCH OKAZJI')
@@ -57,7 +59,15 @@ module.exports = {
             .setFooter({ text: 'VAULT REP • Wyznaczamy nowe standardy', iconURL: interaction.guild.iconURL() })
             .setTimestamp();
 
-        await interaction.channel.send({ embeds: [eliteEmbed] });
-        await interaction.reply({ content: '✅ Panel Elite (Proxy + Prowizja) został wysłany.', ephemeral: true });
+        try {
+            // Wysyłamy główny panel na kanał
+            await interaction.channel.send({ embeds: [eliteEmbed] });
+            
+            // Edytujemy naszą odpowiedź (potwierdzenie dla Ciebie)
+            await interaction.editReply({ content: '✅ Panel Elite (Proxy + Prowizja) został wysłany pomyślnie.' });
+        } catch (err) {
+            console.error('[VAULT REP] Błąd wysyłania panelu:', err);
+            await interaction.editReply({ content: '❌ Wystąpił błąd podczas wysyłania panelu na kanał.' });
+        }
     },
 };
