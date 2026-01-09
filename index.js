@@ -6,7 +6,8 @@ const tickets = require('./tickets.js');
 const linkCommand = require('./link.js');
 const elitePanel = require('./elitepanel.js'); 
 const tiktok = require('./tiktokpowiadomienia.js');
-const pingOsoby = require('./pingosoby.js'); // DODANO: Import systemu pingowania po weryfikacji
+const pingOsoby = require('./pingosoby.js');
+const chatMod = require('./ograniczaniachat.js'); // DODANO: System ograniczeń czatu
 const http = require('http');
 require('dotenv').config();
 
@@ -35,7 +36,8 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-client.once('ready', async () => {
+// Zmieniono 'ready' na 'clientReady' aby usunąć ostrzeżenie z logów
+client.once('clientReady', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
     // --- STATUS STREAMOWANIA ---
@@ -110,10 +112,14 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// --- KOMENDY TEKSTOWE ---
+// --- KOMENDY TEKSTOWE I MODERACJA ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    // MODERACJA CZATU (Najpierw sprawdzamy zakazane słowa)
+    await chatMod.handleChatModeration(message);
+
+    // TESTY SYSTEMÓW
     if (message.content === '!powitania-test') {
         const embed = createWelcomeEmbed(message.member);
         await message.channel.send({ content: `🚀 **VAULT REP: Test systemu powitań**`, embeds: [embed] });
