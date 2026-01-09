@@ -23,7 +23,7 @@ module.exports = {
         const eliteEmbed = new EmbedBuilder()
             .setColor(VAULT_BLUE)
             .setAuthor({ 
-                name: 'VAULT REP | PRESTIGE PROGRAM', 
+                name: 'VAULT REP | RANGA ELITE', 
                 iconURL: PANEL_IMAGE 
             })
             .setTitle('💎 RANGA ELITE – TWOJA PRZEPUSTKA DO NAJLEPSZYCH OKAZJI')
