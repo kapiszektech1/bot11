@@ -2,7 +2,7 @@
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 const CONFIG = {
-    ALLOWED_CHANNEL_ID: '1457675932482666613', // System działa TYLKO tutaj
+    ALLOWED_CHANNEL_ID: '1457675932482666613',
     LOG_CHANNEL_ID: '1459249443512520889',
     BAD_WORDS: [
         /jeb/i, /pierdol/i, /skurwysyn/i, /pizd/i, /chuj/i, /cwel/i, /pedal/i,
@@ -13,10 +13,11 @@ const CONFIG = {
 
 module.exports = {
     handleChatModeration: async (message) => {
-        // 1. Sprawdzenie, czy to odpowiedni kanał, czy nie bot i czy nie admin
+        // 1. Sprawdzenie kanału i czy to nie bot
         if (message.channel.id !== CONFIG.ALLOWED_CHANNEL_ID) return;
         if (message.author.bot || !message.guild || !message.member) return;
-        if (message.member.permissions.has(PermissionFlagsBits.Administrator)) return;
+
+        // USUNIĘTO: blokadę dla Administratora - teraz działa na KAŻDEGO
 
         // 2. Sprawdzenie zakazanych słów
         const containsBadWord = CONFIG.BAD_WORDS.some(pattern => pattern.test(message.content));
@@ -30,10 +31,12 @@ module.exports = {
                 const dmEmbed = new EmbedBuilder()
                     .setColor(0xFF0000)
                     .setTitle('⚠️ OSTRZEŻENIE – VAULT REP')
-                    .setDescription(`Twoja wiadomość na kanale <#${CONFIG.ALLOWED_CHANNEL_ID}> została usunięta (wulgaryzmy lub handel).`)
+                    .setDescription(`Twoja wiadomość na kanale <#${CONFIG.ALLOWED_CHANNEL_ID}> została usunięta.`)
                     .addFields({ name: 'Treść wiadomości:', value: `\`\`\`${message.content}\`\`\`` });
 
-                await message.author.send({ embeds: [dmEmbed] }).catch(() => {});
+                await message.author.send({ embeds: [dmEmbed] }).catch(() => {
+                    console.log(`[VAULT REP] Nie można wysłać DM do ${message.author.tag} (może ma zablokowane DM)`);
+                });
 
                 // 5. LOGI DLA 02,03
                 const logChannel = message.guild.channels.cache.get(CONFIG.LOG_CHANNEL_ID);
