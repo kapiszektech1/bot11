@@ -40,7 +40,6 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-// POPRAWKA: Używamy uniwersalnego zdarzenia 'ready' z dodatkowym logiem
 client.on('ready', async () => {
     console.log(`✅ VAULT REP: Zalogowano jako ${client.user.tag}`);
     
@@ -53,15 +52,16 @@ client.on('ready', async () => {
         status: 'online',
     });
 
-    // ZWIĘKSZONO DO 5 MINUT, ABY UNIKNĄĆ BANA ZA SPAM
     setInterval(() => {
         tiktok.checkTikTok(client);
     }, 300000); 
     
+    // Pobieranie zaproszeń przy starcie
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
             invites.set(guild.id, new Collection(guildInvites.map(inv => [inv.code, inv.uses])));
+            console.log(`Pobrano zaproszenia dla: ${guild.name}`);
         } catch (err) {
             console.log(`Błąd zaproszeń dla: ${guild.name}`);
         }
@@ -72,7 +72,6 @@ client.on('ready', async () => {
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
-
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
         if (commandName === 'panel-ticket') return await tickets.execute(interaction);
         if (commandName === 'link') return await linkCommand.execute(interaction);
@@ -86,7 +85,6 @@ client.on('interactionCreate', async interaction => {
         const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
         if (toolCommands.includes(commandName)) return await narzedzia.execute(interaction);
     }
-
     try {
         await tickets.handleInteraction(interaction);
     } catch (err) {
@@ -94,18 +92,40 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// --- RESZTA LOGIKI (POWITANIA I PINGI) ---
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
     await pingOsoby.handleRolePing(oldMember, newMember);
 });
 
+// --- POPRAWIONA SEKCJA ZAPROSZEŃ DLA 02,03 ---
 client.on('guildMemberAdd', async (member) => {
+    // 1. Powitanie
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
         const welcomeEmbed = createWelcomeEmbed(member);
         await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
     }
-    // ... (logika zaproszeń) ...
+
+    // 2. Logika Zaproszeń
+    const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
+    if (logChannel) {
+        try {
+            const newInvites = await member.guild.invites.fetch();
+            const oldInvites = invites.get(member.guild.id);
+            
+            // Szukamy użytego kodu
+            const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
+            const inviter = invite ? invite.inviter : null;
+
+            // Aktualizacja pamięci
+            invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
+
+            // Wysyłanie embeda z zaproszenia.js
+            const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
+            await logChannel.send({ embeds: [inviteEmbed] });
+        } catch (e) {
+            console.error("Błąd śledzenia zaproszeń:", e);
+        }
+    }
 });
 
 client.on('messageCreate', async (message) => {
@@ -124,12 +144,8 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// --- KRYTYCZNA OBSŁUGA LOGOWANIA ---
 console.log("--- Próba nawiązania połączenia z Discordem... ---");
-
 client.login(process.env.TOKEN).catch(err => {
-    console.error("❌ BŁĄD LOGOWANIA:");
-    console.error(err);
+    console.error("❌ BŁĄD LOGOWANIA:", err);
 });
-
 client.on('error', console.error);
