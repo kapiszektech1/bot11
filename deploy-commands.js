@@ -1,7 +1,7 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
-// Definicja wszystkich komend bota
+// Definicja wszystkich komend bota VAULT REP
 const commands = [
     // 1. Komenda Panelu Kuponów
     new SlashCommandBuilder()
@@ -31,7 +31,7 @@ const commands = [
         .setDescription('Wysyła luksusowy panel informacyjny sekcji Elite (Tylko Zarząd)')
         .setDMPermission(false),
 
-    // 5. [NOWA] Komenda BAN
+    // 5. Komenda BAN
     new SlashCommandBuilder()
         .setName('ban')
         .setDescription('Trwale banuje użytkownika (Tylko Zarząd)')
@@ -39,7 +39,7 @@ const commands = [
         .addStringOption(opt => opt.setName('powod').setDescription('Powód bana').setRequired(true))
         .setDMPermission(false),
 
-    // 6. [NOWA] Komenda KICK
+    // 6. Komenda KICK
     new SlashCommandBuilder()
         .setName('kick')
         .setDescription('Wyrzuca użytkownika z serwera (Tylko Zarząd)')
@@ -47,7 +47,7 @@ const commands = [
         .addStringOption(opt => opt.setName('powod').setDescription('Powód wyrzucenia').setRequired(true))
         .setDMPermission(false),
 
-    // 7. [NOWA] Komenda MUTE
+    // 7. Komenda MUTE
     new SlashCommandBuilder()
         .setName('mute')
         .setDescription('Wycisza użytkownika (Zarząd i Moderacja)')
@@ -56,12 +56,40 @@ const commands = [
         .addStringOption(opt => opt.setName('powod').setDescription('Powód wyciszenia').setRequired(true))
         .setDMPermission(false),
 
-    // 8. [NOWA] Komenda WARN
+    // 8. Komenda WARN
     new SlashCommandBuilder()
         .setName('warn')
         .setDescription('Nadaje ostrzeżenie użytkownikowi (Zarząd i Moderacja)')
         .addUserOption(opt => opt.setName('osoba').setDescription('Użytkownik do ostrzeżenia').setRequired(true))
         .addStringOption(opt => opt.setName('powod').setDescription('Powód ostrzeżenia').setRequired(true))
+        .setDMPermission(false),
+
+    // --- NOWE KOMENDY NARZĘDZIOWE ---
+
+    // 9. Komenda PING
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Sprawdza aktualne opóźnienie bota')
+        .setDMPermission(false),
+
+    // 10. Komenda USERINFO
+    new SlashCommandBuilder()
+        .setName('userinfo')
+        .setDescription('Wyświetla szczegółowe informacje o użytkowniku')
+        .addUserOption(opt => opt.setName('osoba').setDescription('Użytkownik, którego dane chcesz sprawdzić'))
+        .setDMPermission(false),
+
+    // 11. Komenda SERVERINFO
+    new SlashCommandBuilder()
+        .setName('serverinfo')
+        .setDescription('Wyświetla profesjonalne statystyki serwera')
+        .setDMPermission(false),
+
+    // 12. Komenda CLEAR
+    new SlashCommandBuilder()
+        .setName('clear')
+        .setDescription('Masowe usuwanie wiadomości z kanału')
+        .addIntegerOption(opt => opt.setName('ilosc').setDescription('Liczba wiadomości do usunięcia (1-100)').setRequired(true))
         .setDMPermission(false)
 
 ].map(command => command.toJSON());
@@ -70,7 +98,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
     try {
-        console.log('--- VAULT REP: Rozpoczynam odświeżanie komend Slash ---');
+        console.log('--- VAULT REP: Rozpoczynam odświeżanie komend Slash (łącznie 12) ---');
 
         await rest.put(
             Routes.applicationGuildCommands(
@@ -80,7 +108,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
             { body: commands },
         );
 
-        console.log('✅ VAULT REP: Pomyślnie zarejestrowano wszystkie komendy, w tym system moderacji.');
+        console.log('✅ VAULT REP: Pomyślnie zarejestrowano wszystkie 12 komend (Panele, Moderacja, Narzędzia).');
     } catch (error) {
         console.error('❌ Błąd rejestracji:', error);
     }
