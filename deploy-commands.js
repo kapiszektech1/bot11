@@ -23,6 +23,11 @@ const commands = [
         .setDescription('Wysyła luksusowy panel informacyjny sekcji Elite (Tylko Zarząd)')
         .setDMPermission(false),
 
+    new SlashCommandBuilder() // DODANO: 14-sta komenda
+        .setName('panel-zarobek')
+        .setDescription('Wysyła panel współpracy zarobkowej (Zarząd)')
+        .setDMPermission(false),
+
     // 2. System Moderacji
     new SlashCommandBuilder()
         .setName('ban')
