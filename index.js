@@ -8,7 +8,8 @@ const elitePanel = require('./elitepanel.js');
 const tiktok = require('./tiktokpowiadomienia.js');
 const pingOsoby = require('./pingosoby.js');
 const chatMod = require('./ograniczaniachat.js');
-const moderacja = require('./moderacja.js'); // DODANO: Import systemu moderacji (Ban/Kick/Mute/Warn)
+const moderacja = require('./moderacja.js');
+const narzedzia = require('./narzedzia.js'); // DODANO: System narzędzi (Ping/UserInfo/ServerInfo/Clear)
 const http = require('http');
 require('dotenv').config();
 
@@ -37,7 +38,7 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-client.once('clientReady', async () => {
+client.once('ready', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
     client.user.setPresence({
@@ -68,16 +69,22 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
-        // Podstawowe panele i linki
+        // 1. Podstawowe panele i linki
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
         if (commandName === 'panel-ticket') return await tickets.execute(interaction);
         if (commandName === 'link') return await linkCommand.execute(interaction);
         if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
 
-        // NOWE: System moderacji (Ban, Kick, Mute, Warn)
+        // 2. System moderacji (Ban, Kick, Mute, Warn)
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
         if (modCommands.includes(commandName)) {
             return await moderacja.execute(interaction);
+        }
+
+        // 3. System narzędzi (Ping, UserInfo, ServerInfo, Clear)
+        const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
+        if (toolCommands.includes(commandName)) {
+            return await narzedzia.execute(interaction);
         }
         
         return;
@@ -121,7 +128,6 @@ client.on('guildMemberAdd', async (member) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // Moderacja automatyczna (zakazane słowa na wybranym kanale)
     await chatMod.handleChatModeration(message);
 
     if (message.content === '!powitania-test') {
@@ -136,5 +142,7 @@ client.on('messageCreate', async (message) => {
         }
     }
 });
+
+client.on('error', console.error);
 
 client.login(process.env.TOKEN);
