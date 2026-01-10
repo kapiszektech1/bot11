@@ -40,9 +40,10 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-// POPRAWKA DLA 02,03: Zmiana z 'ready' na 'clientReady'
-client.once('clientReady', async () => {
-    console.log(`--- VAULT REP Bot Online ---`);
+// POPRAWKA DLA 02,03: Powrót do standardowego 'ready' dla stabilności
+client.once('ready', async () => {
+    console.log(`✅ SUKCES: Zalogowano jako ${client.user.tag}`);
+    console.log(`--- VAULT REP Bot jest teraz ONLINE ---`);
     
     client.user.setPresence({
         activities: [{ 
@@ -53,7 +54,7 @@ client.once('clientReady', async () => {
         status: 'online',
     });
 
-    // Sprawdzanie TikToka co 5 minut (bezpieczniejsze dla stabilności)
+    // Sprawdzanie TikToka co 5 minut
     setInterval(() => {
         tiktok.checkTikTok(client);
     }, 300000); 
@@ -73,7 +74,6 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
-        // 1. Podstawowe panele, regulamin, linki i zarobek
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
         if (commandName === 'panel-ticket') return await tickets.execute(interaction);
         if (commandName === 'link') return await linkCommand.execute(interaction);
@@ -81,17 +81,11 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
         if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
 
-        // 2. System moderacji (Ban, Kick, Mute, Warn)
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
-        if (modCommands.includes(commandName)) {
-            return await moderacja.execute(interaction);
-        }
+        if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
 
-        // 3. System narzędzi (Ping, UserInfo, ServerInfo, Clear)
         const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
-        if (toolCommands.includes(commandName)) {
-            return await narzedzia.execute(interaction);
-        }
+        if (toolCommands.includes(commandName)) return await narzedzia.execute(interaction);
         
         return;
     }
@@ -103,12 +97,10 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// --- SYSTEM PINGOWANIA PO WERYFIKACJI ---
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
     await pingOsoby.handleRolePing(oldMember, newMember);
 });
 
-// --- POWITANIA I LOGI ZAPROSZEŃ ---
 client.on('guildMemberAdd', async (member) => {
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
@@ -134,10 +126,8 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// --- KOMENDY TEKSTOWE I MODERACJA ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-
     await chatMod.handleChatModeration(message);
 
     if (message.content === '!powitania-test') {
@@ -154,5 +144,4 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('error', console.error);
-
 client.login(process.env.TOKEN);
