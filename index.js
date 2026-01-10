@@ -10,7 +10,8 @@ const pingOsoby = require('./pingosoby.js');
 const chatMod = require('./ograniczaniachat.js');
 const moderacja = require('./moderacja.js');
 const narzedzia = require('./narzedzia.js');
-const regulaminPanel = require('./regulaminpanel.js'); // DODANO: Import systemu regulaminu
+const regulaminPanel = require('./regulaminpanel.js');
+const panelZarobek = require('./panel-zarobek.js'); // DODANO: Import systemu zarobkowego
 const http = require('http');
 require('dotenv').config();
 
@@ -70,12 +71,13 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
-        // 1. Podstawowe panele, regulamin i linki
+        // 1. Podstawowe panele, regulamin, linki i zarobek
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
         if (commandName === 'panel-ticket') return await tickets.execute(interaction);
         if (commandName === 'link') return await linkCommand.execute(interaction);
         if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
-        if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction); // DODANO
+        if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
+        if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction); // DODANO
 
         // 2. System moderacji (Ban, Kick, Mute, Warn)
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
