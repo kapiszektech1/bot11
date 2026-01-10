@@ -7,42 +7,45 @@ module.exports = {
         .setDMPermission(false),
 
     async execute(interaction) {
+        // Natychmiastowa informacja dla Discorda, że bot myśli (zapobiega błędowi 10062)
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
         if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-            return interaction.reply({ content: '❌ Brak uprawnień.', flags: [MessageFlags.Ephemeral] });
+            return interaction.editReply({ content: '❌ Brak uprawnień.' });
         }
 
         const zarobekEmbed = new EmbedBuilder()
             .setColor(0x00008B)
             .setTitle('💰 ZARABIAJ Z VAULT REP – PROGRAM PARTNERSKI')
-            .setDescription('Szukamy promotorów, którzy pomogą nam ściągać nowych użytkowników na nasz kod KakoBuy!')
+            .setDescription('Szukamy promotorów! Promuj nasz kod i zarabiaj realne pieniądze.')
             .addFields(
                 { 
-                    name: '🔗 TWÓJ LINK DO PROMOCJI', 
-                    value: 'Używasz wyłącznie tego linku: https://ikako.vip/r/xhm44' 
+                    name: '🔗 TWÓJ LINK', 
+                    value: 'https://ikako.vip/r/xhm44' 
                 },
                 { 
-                    name: '💵 STAWKA', 
-                    value: '• **40 PLN LITECOIN/PAYPAL lub BLIK 15% PROWIZJI** za każde 100 zarejestrowanych osób z naszego kodu.' 
+                    name: '💵 STAWKA I WARUNKI', 
+                    value: '• **50 PLN (LTC/PP) lub BLIK 15% PROWIZJI** za każde 100 osób.\n• **RESTRYKCJA:** Minimum 5 osób z Twojej setki musi dokonać zakupu.\n• Bez aktywnych kupujących wypłata nie zostanie zrealizowana (ochrona przed fake-kontami).' 
                 },
                 { 
-                    name: '📅 ZASADY WYPŁAT', 
-                    value: '• Rozliczenie następuje **raz w miesiącu**.\n• Minimalny próg: **100 osób w ciągu 30 dni**.\n• Jeśli nie dobijesz do setki, postęp zeruje się wraz z nowym miesiącem.' 
-                },
-                { 
-                    name: '📸 DOWODY (WYMAGANE)', 
-                    value: 'Musisz posiadać **100 wyraźnych screenów** z profilu zarejestrowanych osób, na których widać nasz kod polecający. Bez kompletu screenów wypłata nie jest realizowana.' 
+                    name: '📸 DOWODY', 
+                    value: 'Musisz posiadać **100 screenów** z profilu zarejestrowanych osób z widocznym naszym kodem.' 
                 },
                 { 
                     name: '📩 JAK DOŁĄCZYĆ?', 
-                    value: 'Otwórz Ticket w kategorii **"COLLAB"**, aby zgłosić chęć współpracy i otrzymać status promotora.' 
+                    value: 'Otwórz Ticket w kategorii **"COLLAB"**.' 
                 }
             )
-            // TUTAJ WKLEJ LINK DO SWOJEJ GRAFIKI
-            .setImage('https://cdn.discordapp.com/attachments/1458122275973890222/1459512030493933655/obraz.png?ex=69638c00&is=69623a80&hm=978ce977dc1e99ffbc19cbffa45592c4ca1d617715b5e3628ab4af5f6e0a5dea') 
-            .setFooter({ text: 'VAULT REP • System miesięczny' })
+            .setImage('TU_WSTAW_LINK_DO_ZDJECIA') // Pamiętaj o wstawieniu linku!
+            .setFooter({ text: 'VAULT REP • Weryfikacja: 100 osób + 5 zakupów' })
             .setTimestamp();
 
-        await interaction.channel.send({ embeds: [zarobekEmbed] });
-        return interaction.reply({ content: '✅ Panel współpracy ze zdjęciem został wysłany.', flags: [MessageFlags.Ephemeral] });
+        try {
+            await interaction.channel.send({ embeds: [zarobekEmbed] });
+            await interaction.editReply({ content: '✅ Panel współpracy został wysłany pomyślnie.' });
+        } catch (error) {
+            console.error(error);
+            await interaction.editReply({ content: '❌ Wystąpił błąd podczas wysyłania panelu.' });
+        }
     }
 };
