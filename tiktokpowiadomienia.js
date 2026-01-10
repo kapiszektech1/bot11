@@ -8,23 +8,30 @@ const CHANNEL_ID = '1457675907543334973';
 const LUXURY_BLUE = 0x00008B; 
 const NEW_LOGO = 'https://cdn.discordapp.com/attachments/1458122275973890222/1458455764984397972/image.png';
 
-let lastVideo = "wymuszenie_wysylki"; 
+// Zmieniamy na null, aby bot przy starcie zapisał pierwszy pobrany film jako "aktualny" 
+// bez wysyłania spamu, jeśli już go wcześniej wysłał.
+let lastVideo = null; 
 
 module.exports = {
     checkTikTok: async (client) => {
         try {
-            // Pobieramy RSS z wymuszeniem braku cache (dodajemy timestamp)
             const feed = await parser.parseURL(`${TIKTOK_RSS_URL}?t=${Date.now()}`);
             if (!feed || !feed.items.length) return;
             
-            // Pobieramy absolutnie najnowszy element z samej góry
             const latestItem = feed.items[0];
 
+            // Jeśli to pierwsze uruchomienie po restarcie
+            if (lastVideo === null) {
+                lastVideo = latestItem.link;
+                console.log(`[TikTok] System zainicjowany. Ostatni film: ${lastVideo}`);
+                return; // Nie wysyłamy, bo prawdopodobnie już jest na kanale
+            }
+
+            // Sprawdzamy czy link jest faktycznie nowy
             if (latestItem.link !== lastVideo) {
                 const channel = await client.channels.fetch(CHANNEL_ID);
                 if (!channel) return;
 
-                // Próba wyciągnięcia miniatury filmu
                 const thumbnail = latestItem.content?.match(/src="([^"]+)"/)?.[1] || "";
 
                 const embed = new EmbedBuilder()
