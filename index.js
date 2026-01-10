@@ -11,7 +11,7 @@ const chatMod = require('./ograniczaniachat.js');
 const moderacja = require('./moderacja.js');
 const narzedzia = require('./narzedzia.js');
 const regulaminPanel = require('./regulaminpanel.js');
-const panelZarobek = require('./panel-zarobek.js'); // DODANO: Import systemu zarobkowego
+const panelZarobek = require('./panel-zarobek.js'); 
 const http = require('http');
 require('dotenv').config();
 
@@ -40,7 +40,8 @@ const INVITE_LOG_CHANNEL_ID = '1457675879219200033';
 
 const invites = new Collection();
 
-client.once('ready', async () => {
+// POPRAWKA DLA 02,03: Zmiana z 'ready' na 'clientReady'
+client.once('clientReady', async () => {
     console.log(`--- VAULT REP Bot Online ---`);
     
     client.user.setPresence({
@@ -52,9 +53,10 @@ client.once('ready', async () => {
         status: 'online',
     });
 
+    // Sprawdzanie TikToka co 5 minut (bezpieczniejsze dla stabilności)
     setInterval(() => {
         tiktok.checkTikTok(client);
-    }, 60000); 
+    }, 300000); 
     
     for (const [id, guild] of client.guilds.cache) {
         try {
@@ -77,7 +79,7 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'link') return await linkCommand.execute(interaction);
         if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
         if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
-        if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction); // DODANO
+        if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
 
         // 2. System moderacji (Ban, Kick, Mute, Warn)
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
@@ -116,15 +118,19 @@ client.on('guildMemberAdd', async (member) => {
 
     const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
     if (logChannel) {
-        const newInvites = await member.guild.invites.fetch().catch(() => new Collection());
-        const oldInvites = invites.get(member.guild.id);
-        const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
-        const inviter = invite ? invite.inviter : null;
+        try {
+            const newInvites = await member.guild.invites.fetch();
+            const oldInvites = invites.get(member.guild.id);
+            const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
+            const inviter = invite ? invite.inviter : null;
 
-        invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
+            invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
 
-        const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
-        await logChannel.send({ embeds: [inviteEmbed] }).catch(console.error);
+            const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
+            await logChannel.send({ embeds: [inviteEmbed] }).catch(console.error);
+        } catch (e) {
+            console.error("Błąd logów zaproszeń:", e);
+        }
     }
 });
 
