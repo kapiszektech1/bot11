@@ -1,4 +1,12 @@
-const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    ButtonBuilder, 
+    ButtonStyle 
+} = require('discord.js');
 
 const MY_ID = '1419055461776228523';
 
@@ -46,24 +54,22 @@ if (!global.vaultCarts) { global.vaultCarts = new Map(); }
 
 // --- FUNKCJA TWORZĄCA PASEK POSTĘPU ---
 function createProgressBar(currentWeight) {
-    // Skala: 0 - 5000g (5kg to typowa paczka, można zmienić)
     const max = 5000;
     const percentage = Math.min((currentWeight / max) * 100, 100);
-    const progress = Math.round(percentage / 10); // 10 klocków
+    const progress = Math.round(percentage / 10);
     const bar = '▰'.repeat(progress) + '▱'.repeat(10 - progress);
     return `${bar} **${Math.round(percentage)}%** (Limitu 5kg)`;
 }
 
 // --- GŁÓWNY DESIGN PANELU ---
 function createMainPanel(target, cart) {
-    const user = target.author || target.user; // Obsługa Message i Interaction
+    const user = target.author || target.user;
     const userName = user ? user.username : 'Gościu';
     const avatar = user ? user.displayAvatarURL() : null;
 
     const totalW = cart.reduce((s, i) => s + i.weight, 0);
     const itemCount = cart.length;
 
-    // Tworzenie estetycznej listy
     let cartList = "_Twój koszyk jest pusty. Dodaj coś!_";
     if (cart.length > 0) {
         cartList = cart.map((i, n) => {
@@ -73,40 +79,52 @@ function createMainPanel(target, cart) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'VAULT REP • SHIPPING CALCULATOR', iconURL: 'https://cdn.discordapp.com/emojis/1324508499257626707.webp?size=96&quality=lossless' }) // Możesz tu dać ikonkę swojego serwera
+        .setAuthor({ name: 'VAULT REP • SHIPPING CALCULATOR', iconURL: 'https://cdn.discordapp.com/emojis/1324508499257626707.webp?size=96&quality=lossless' }) 
         .setTitle(`🛒 KOSZYK UŻYTKOWNIKA ${userName.toUpperCase()}`)
         .setDescription(`Zarządzaj swoją paczką poniżej. System automatycznie dobiera wagi.\n\n${cartList}`)
         .addFields(
             { name: '📦 STATYSTYKI PACZKI', value: `Waga: \`${totalW}g\`\nIlość: \`${itemCount} szt.\``, inline: true },
             { name: '📊 STATUS ZAPEŁNIENIA', value: createProgressBar(totalW), inline: false }
         )
-        .setColor(0x2B2D31) // Ciemny, elegancki kolor Discorda
-        .setThumbnail('https://cdn-icons-png.flaticon.com/512/679/679720.png') // Estetyczna ikonka paczki
+        .setColor(0x2B2D31)
+        .setThumbnail('https://cdn-icons-png.flaticon.com/512/679/679720.png')
         .setFooter({ text: 'Powered by VAULT REP AI • 2026', iconURL: avatar });
 
-    const row = new ActionRowBuilder().addComponents(
-        { type: 2, style: 3, label: 'Dodaj Produkt', emoji: '➕', custom_id: 'calc_add' }, // Green
-        { type: 2, style: 4, label: 'Usuń Ostatni', emoji: '🗑️', custom_id: 'calc_remove' }, // Red
-        { type: 2, style: 1, label: 'Wyceń Wysyłkę', emoji: '💸', custom_id: 'calc_summary' } // Blurple
-    );
+    // --- NAPRAWA: UŻYCIE BUTTON BUILDER ---
+    const addBtn = new ButtonBuilder()
+        .setCustomId('calc_add')
+        .setLabel('Dodaj Produkt')
+        .setEmoji('➕')
+        .setStyle(ButtonStyle.Success); // Green
+
+    const removeBtn = new ButtonBuilder()
+        .setCustomId('calc_remove')
+        .setLabel('Usuń Ostatni')
+        .setEmoji('🗑️')
+        .setStyle(ButtonStyle.Danger); // Red
+
+    const summaryBtn = new ButtonBuilder()
+        .setCustomId('calc_summary')
+        .setLabel('Wyceń Wysyłkę')
+        .setEmoji('💸')
+        .setStyle(ButtonStyle.Primary); // Blurple
+
+    const row = new ActionRowBuilder().addComponents(addBtn, removeBtn, summaryBtn);
     return { embeds: [embed], components: [row] };
 }
 
 module.exports = {
-    // 1. START (Komenda !obliczwage lub /obliczwage)
+    // 1. START
     execute: async (target) => {
         const user = target.author || target.user;
         global.vaultCarts.set(user.id, []);
         
         const panel = createMainPanel(target, []);
         
-        // Sprawdzamy czy odpowiadamy na wiadomość czy interakcję
         if (target.reply) {
-            // Dla Slash Command lub Message.reply
-            await target.reply(panel).catch(e => console.log(e));
+            await target.reply(panel).catch(e => console.log("Błąd reply:", e));
         } else {
-            // Fallback dla kanału
-            await target.channel.send(panel).catch(e => console.log(e));
+            await target.channel.send(panel).catch(e => console.log("Błąd send:", e));
         }
     },
 
@@ -117,7 +135,6 @@ module.exports = {
             if (!global.vaultCarts.has(userId)) global.vaultCarts.set(userId, []);
             let cart = global.vaultCarts.get(userId);
 
-            // --- PRZYCISK: DODAJ ---
             if (interaction.customId === 'calc_add') {
                 const modal = new ModalBuilder().setCustomId('calc_modal_ai').setTitle('➕ DODAJ DO PACZKI');
                 modal.addComponents(
@@ -128,7 +145,6 @@ module.exports = {
                 return await interaction.showModal(modal).catch(() => {});
             }
 
-            // --- ODPOWIEDŹ Z FORMULARZA (MODAL) ---
             if (interaction.customId === 'calc_modal_ai') {
                 if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
 
@@ -137,11 +153,9 @@ module.exports = {
                 const manualIn = interaction.fields.getTextInputValue('weight_manual');
                 
                 let weight = null;
-                // Logika wagi ręcznej
                 if (manualIn && !isNaN(manualIn)) {
                     weight = parseInt(manualIn);
                 } else {
-                    // Logika wyszukiwania w bazie
                     const n = nameIn.toLowerCase();
                     let bestMatch = null;
                     for (const key in wagiBaza) {
@@ -154,16 +168,14 @@ module.exports = {
                     }
                 }
 
-                // Jeśli nie znaleziono
                 if (weight === null) {
-                    weight = 800; // Domyślna waga
+                    weight = 800; 
                     try {
                         const boss = await interaction.client.users.fetch(MY_ID);
                         await boss.send(`💡 **SUGESTIA DO BAZY:** \`${nameIn}\` (Użytkownik: ${interaction.user.tag})`);
                     } catch (e) {}
                 }
                 
-                // Formatowanie nazwy
                 let displayName = nameIn.charAt(0).toUpperCase() + nameIn.slice(1);
                 if (sizeIn) displayName += ` [${sizeIn.toUpperCase()}]`;
 
@@ -172,7 +184,6 @@ module.exports = {
                 await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
             }
 
-            // --- PRZYCISK: USUŃ ---
             if (interaction.customId === 'calc_remove') {
                 if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
                 cart.pop();
@@ -180,7 +191,6 @@ module.exports = {
                 await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
             }
 
-            // --- PRZYCISK: PODSUMOWANIE ---
             if (interaction.customId === 'calc_summary') {
                 if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
                 
@@ -189,7 +199,6 @@ module.exports = {
                 }
 
                 const tW = cart.reduce((a, b) => a + b.weight, 0);
-                // Wzór na ETL (z Twojego kodu)
                 const cena = (31.91 + (Math.ceil(tW / 500) - 1) * 30.96 + 37.63).toFixed(2);
 
                 const embedS = new EmbedBuilder()
@@ -209,7 +218,6 @@ module.exports = {
 
         } catch (err) {
             console.error("Błąd w kalkulatorze:", err);
-            if (!interaction.replied) await interaction.reply({ content: '❌ Wystąpił błąd systemu.', ephemeral: true });
         }
     }
 };
