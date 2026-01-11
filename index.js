@@ -12,7 +12,7 @@ const moderacja = require('./moderacja.js');
 const narzedzia = require('./narzedzia.js');
 const regulaminPanel = require('./regulaminpanel.js');
 const panelZarobek = require('./panel-zarobek.js'); 
-const kalkulator = require('./kalkulator.js'); // DODANO: Import kalkulatora AI
+const kalkulator = require('./kalkulator.js');
 const http = require('http');
 require('dotenv').config();
 
@@ -80,7 +80,7 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
         if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
         
-        // DODANO: Obsługa kalkulatora AI
+        // Obsługa kalkulatora AI (Slash)
         if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
 
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
@@ -92,7 +92,8 @@ client.on('interactionCreate', async interaction => {
 
     // 2. Obsługa Przycisków i Modali (Kalkulator AI)
     if (interaction.isButton() || interaction.isModalSubmit()) {
-        if (interaction.customId.startsWith('calc_') || interaction.customId.startsWith('modal_ai')) {
+        // Poprawiony filtr, aby łapał oba prefiksy używane w kalkulatorze
+        if (interaction.customId.startsWith('calc_')) {
             return await kalkulator.handleInteraction(interaction);
         }
     }
@@ -135,6 +136,11 @@ client.on('guildMemberAdd', async (member) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     await chatMod.handleChatModeration(message);
+
+    // DODANO: Obsługa komendy tekstowej kalkulatora
+    if (message.content === '!obliczwage') {
+        return await kalkulator.execute(message);
+    }
 
     if (message.content === '!powitania-test') {
         const embed = createWelcomeEmbed(message.member);
