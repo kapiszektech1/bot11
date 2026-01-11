@@ -52,7 +52,6 @@ const wagiBaza = {
 
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
 
-// --- FUNKCJA TWORZĄCA PASEK POSTĘPU ---
 function createProgressBar(currentWeight) {
     const max = 5000;
     const percentage = Math.min((currentWeight / max) * 100, 100);
@@ -61,7 +60,6 @@ function createProgressBar(currentWeight) {
     return `${bar} **${Math.round(percentage)}%** (Limitu 5kg)`;
 }
 
-// --- GŁÓWNY DESIGN PANELU ---
 function createMainPanel(target, cart) {
     const user = target.author || target.user;
     const userName = user ? user.username : 'Gościu';
@@ -90,24 +88,9 @@ function createMainPanel(target, cart) {
         .setThumbnail('https://cdn-icons-png.flaticon.com/512/679/679720.png')
         .setFooter({ text: 'Powered by VAULT REP AI • 2026', iconURL: avatar });
 
-    // --- NAPRAWA: UŻYCIE BUTTON BUILDER ---
-    const addBtn = new ButtonBuilder()
-        .setCustomId('calc_add')
-        .setLabel('Dodaj Produkt')
-        .setEmoji('➕')
-        .setStyle(ButtonStyle.Success); // Green
-
-    const removeBtn = new ButtonBuilder()
-        .setCustomId('calc_remove')
-        .setLabel('Usuń Ostatni')
-        .setEmoji('🗑️')
-        .setStyle(ButtonStyle.Danger); // Red
-
-    const summaryBtn = new ButtonBuilder()
-        .setCustomId('calc_summary')
-        .setLabel('Wyceń Wysyłkę')
-        .setEmoji('💸')
-        .setStyle(ButtonStyle.Primary); // Blurple
+    const addBtn = new ButtonBuilder().setCustomId('calc_add').setLabel('Dodaj Produkt').setEmoji('➕').setStyle(ButtonStyle.Success);
+    const removeBtn = new ButtonBuilder().setCustomId('calc_remove').setLabel('Usuń Ostatni').setEmoji('🗑️').setStyle(ButtonStyle.Danger);
+    const summaryBtn = new ButtonBuilder().setCustomId('calc_summary').setLabel('Wyceń Wysyłkę').setEmoji('💸').setStyle(ButtonStyle.Primary);
 
     const row = new ActionRowBuilder().addComponents(addBtn, removeBtn, summaryBtn);
     return { embeds: [embed], components: [row] };
@@ -126,9 +109,18 @@ module.exports = {
         } else {
             await target.channel.send(panel).catch(e => console.log("Błąd send:", e));
         }
+
+        // --- TUTORIAL POWITALNY POD PANELEM ---
+        const tutorialStart = `
+# 📦 WITAMY W KALKULATORZE!
+> **Chcesz obliczyć wagę i cenę swojej paczki? To proste!**
+
+Wpisz komendę: \`!obliczwage\` aby bot przygotował Twój osobisty panel zarządzania przedmiotami.
+        `;
+        await target.channel.send(tutorialStart).catch(e => console.log(e));
     },
 
-    // 2. OBSŁUGA KLIKNIĘĆ
+    // 2. OBSŁUGA INTERAKCJI
     handleInteraction: async (interaction) => {
         try {
             const userId = interaction.user.id;
@@ -138,9 +130,9 @@ module.exports = {
             if (interaction.customId === 'calc_add') {
                 const modal = new ModalBuilder().setCustomId('calc_modal_ai').setTitle('➕ DODAJ DO PACZKI');
                 modal.addComponents(
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("NAZWA PRODUKTU").setPlaceholder("np. Jordan 4, Trapstar Hoodie...").setStyle(TextInputStyle.Short).setRequired(true)),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("ROZMIAR (OPCJONALNIE)").setPlaceholder("np. 44, L, M").setStyle(TextInputStyle.Short).setRequired(false)),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('weight_manual').setLabel("WAGA RĘCZNA (OPCJONALNIE)").setPlaceholder("Wpisz tylko jeśli wiesz (w gramach)").setStyle(TextInputStyle.Short).setRequired(false))
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("NAZWA PRODUKTU").setPlaceholder("np. Jordan 4...").setStyle(TextInputStyle.Short).setRequired(true)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("ROZMIAR").setPlaceholder("np. 44").setStyle(TextInputStyle.Short).setRequired(false)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('weight_manual').setLabel("WAGA RĘCZNA").setPlaceholder("W gramach").setStyle(TextInputStyle.Short).setRequired(false))
                 );
                 return await interaction.showModal(modal).catch(() => {});
             }
@@ -152,27 +144,17 @@ module.exports = {
                 const sizeIn = interaction.fields.getTextInputValue('size');
                 const manualIn = interaction.fields.getTextInputValue('weight_manual');
                 
-                let weight = null;
-                if (manualIn && !isNaN(manualIn)) {
-                    weight = parseInt(manualIn);
-                } else {
+                let weight = (manualIn && !isNaN(manualIn)) ? parseInt(manualIn) : null;
+                if (weight === null) {
                     const n = nameIn.toLowerCase();
-                    let bestMatch = null;
-                    for (const key in wagiBaza) {
-                        if (n.includes(key)) {
-                            if (!bestMatch || key.length > bestMatch.length) {
-                                bestMatch = key;
-                                weight = wagiBaza[key];
-                            }
-                        }
-                    }
+                    for (const key in wagiBaza) { if (n.includes(key)) { weight = wagiBaza[key]; break; } }
                 }
 
                 if (weight === null) {
                     weight = 800; 
                     try {
                         const boss = await interaction.client.users.fetch(MY_ID);
-                        await boss.send(`💡 **SUGESTIA DO BAZY:** \`${nameIn}\` (Użytkownik: ${interaction.user.tag})`);
+                        await boss.send(`💡 **SUGESTIA DO BAZY:** \`${nameIn}\``);
                     } catch (e) {}
                 }
                 
@@ -192,10 +174,11 @@ module.exports = {
             }
 
             if (interaction.customId === 'calc_summary') {
-                if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
+                // PUBLICZNA WYCENA
+                if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false }).catch(() => {});
                 
                 if (cart.length === 0) {
-                    return await interaction.followUp({ content: '❌ Twój koszyk jest pusty! Dodaj coś najpierw.', ephemeral: true });
+                    return await interaction.editReply({ content: '❌ Koszyk jest pusty!' });
                 }
 
                 const tW = cart.reduce((a, b) => a + b.weight, 0);
@@ -203,21 +186,29 @@ module.exports = {
 
                 const embedS = new EmbedBuilder()
                     .setTitle('💸 WYCENA WYSYŁKI')
-                    .setDescription(`Oto szacowany koszt wysyłki Twojej paczki o wadze **${tW}g**.`)
+                    .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+                    .setDescription(`Szacowany koszt dla paczki użytkownika <@${interaction.user.id}>.`)
                     .setColor(0x00FF00)
                     .addFields(
-                        { name: '⚖️ Waga Całkowita', value: `\`${tW}g\``, inline: true },
-                        { name: '🚚 Linia', value: `\`ETL / CN-Line\``, inline: true },
+                        { name: '⚖️ Waga', value: `\`${tW}g\``, inline: true },
                         { name: '💰 Koszt', value: `**${cena} PLN**`, inline: true },
-                        { name: '🎟️ Kod Rabatowy', value: 'Użyj kodu: `lucky8` (-56 PLN)', inline: false }
-                    )
-                    .setFooter({ text: 'Ceny są szacunkowe i mogą ulec zmianie.' });
+                        { name: '🎟️ Rabat', value: 'Kod: `lucky8` (-56 PLN)', inline: false }
+                    );
 
-                await interaction.followUp({ embeds: [embedS], ephemeral: true }).catch(() => {});
+                await interaction.editReply({ embeds: [embedS] }).catch(() => {});
+
+                // --- TUTORIAL DLA NIEWIEDZĄCYCH (WYSYŁANY POD WYCENĄ) ---
+                const finalTutorial = `
+# 💡 CO ZROBIĆ Z TĄ WYCENĄ?
+> **Nie wiesz co dalej? Postępuj zgodnie z tymi krokami:**
+
+1️⃣ **Zarejestruj się** z linku na kanale <#1324508499257626707>.
+2️⃣ **Użyj kodu** \`lucky8\` przy wysyłce – obniżysz cenę o **56 PLN**.
+3️⃣ **Zaoszczędź więcej** – rejestracja u nas daje stałe **-10%** na każdą paczkę!
+                `;
+                await interaction.followUp({ content: finalTutorial, ephemeral: false }).catch(() => {});
             }
 
-        } catch (err) {
-            console.error("Błąd w kalkulatorze:", err);
-        }
+        } catch (err) { console.error(err); }
     }
 };
