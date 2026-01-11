@@ -31,71 +31,57 @@ const CONFIG = {
     IMAGE: 'https://cdn.discordapp.com/attachments/1458122275973890222/1458464723531202622/image.png'
 };
 
-async function logAction(guild, title, fields, color = 0x2B2D31) {
-    const logChannel = await guild.channels.fetch(CONFIG.LOG_CHANNEL).catch(() => null);
-    if (!logChannel) return;
-
-    const logEmbed = new EmbedBuilder()
-        .setAuthor({ name: 'VAULT REP | System Logów', iconURL: guild.iconURL() || null })
-        .setTitle(title)
-        .addFields(fields)
-        .setColor(color)
-        .setTimestamp()
-        .setFooter({ text: 'Security Logs' });
-
-    await logChannel.send({ embeds: [logEmbed] });
-}
-
+// Funkcja pomocnicza do tworzenia kanału
 async function createTicketChannel(interaction, categoryKey, reason) {
     if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
     }
 
-    const guild = interaction.guild;
-    const categoryId = CONFIG.CATEGORIES[categoryKey.toUpperCase()];
-    const allowedRoles = CONFIG.ROLES[categoryKey.toUpperCase()];
+    try {
+        const guild = interaction.guild;
+        const catKey = categoryKey.toUpperCase();
+        const categoryId = CONFIG.CATEGORIES[catKey];
+        const allowedRoles = CONFIG.ROLES[catKey];
 
-    const ticketChannel = await guild.channels.create({
-        name: `🎫-${categoryKey}-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        parent: categoryId,
-        permissionOverwrites: [
-            { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] },
-            ...allowedRoles.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
-        ]
-    });
+        const ticketChannel = await guild.channels.create({
+            name: `🎫-${categoryKey}-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            parent: categoryId,
+            permissionOverwrites: [
+                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] },
+                ...allowedRoles.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
+            ]
+        });
 
-    const ticketEmbed = new EmbedBuilder()
-        .setTitle(`🎫 ZGŁOSZENIE: ${categoryKey.toUpperCase()}`)
-        .setDescription(`Witaj ${interaction.user}! Opisz dokładnie swoją sprawę. Administracja zajmie się tym najszybciej jak to możliwe.`)
-        .setColor(CONFIG.COLOR)
-        .addFields(
-            { name: '👤 Użytkownik', value: `> ${interaction.user.tag}`, inline: true },
-            { name: '🆔 ID', value: `> ${interaction.user.id}`, inline: true },
-            { name: '⏰ Otwarto', value: `> <t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
-            { name: '📝 Powód', value: `\`\`\`${reason}\`\`\`` }
-        )
-        .setImage(CONFIG.IMAGE)
-        .setFooter({ text: 'VAULT REP | Czas odpowiedzi: do 24h' });
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle(`🎫 ZGŁOSZENIE: ${catKey}`)
+            .setDescription(`Witaj ${interaction.user}! Opisz dokładnie swoją sprawę. Administracja zajmie się tym najszybciej jak to możliwe.`)
+            .setColor(CONFIG.COLOR)
+            .addFields(
+                { name: '👤 Użytkownik', value: `> ${interaction.user.tag}`, inline: true },
+                { name: '⏰ Otwarto', value: `> <t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
+                { name: '📝 Powód', value: `\`\`\`${reason}\`\`\`` }
+            )
+            .setImage(CONFIG.IMAGE)
+            .setFooter({ text: 'VAULT REP | Czas odpowiedzi: do 24h' });
 
-    const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_claim').setLabel('Przejmij (Claim)').setStyle(ButtonStyle.Primary).setEmoji('🔒'),
-        new ButtonBuilder().setCustomId('ticket_close').setLabel('Zamknij (Close)').setStyle(ButtonStyle.Danger).setEmoji('⚠️')
-    );
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('ticket_claim').setLabel('Przejmij (Claim)').setStyle(ButtonStyle.Primary).setEmoji('🔒'),
+            new ButtonBuilder().setCustomId('ticket_close').setLabel('Zamknij (Close)').setStyle(ButtonStyle.Danger).setEmoji('⚠️')
+        );
 
-    await ticketChannel.send({ content: `${interaction.user} | <@&${allowedRoles[0]}>`, embeds: [ticketEmbed], components: [buttons] });
-    await interaction.editReply({ content: `✅ Twój ticket został utworzony: ${ticketChannel}` });
-
-    await logAction(guild, '🆕 Nowy Ticket', [
-        { name: 'Otwierający', value: `${interaction.user.tag}`, inline: true },
-        { name: 'Kategoria', value: `${categoryKey.toUpperCase()}`, inline: true },
-        { name: 'Kanał', value: `${ticketChannel.name}`, inline: true }
-    ], 0x00FF00);
+        await ticketChannel.send({ content: `${interaction.user} | <@&${allowedRoles[0]}>`, embeds: [ticketEmbed], components: [buttons] });
+        await interaction.editReply({ content: `✅ Twój ticket został utworzony: ${ticketChannel}` });
+    } catch (err) {
+        console.error("Błąd tworzenia kanału:", err);
+        await interaction.editReply({ content: '❌ Wystąpił błąd podczas tworzenia kanału ticketu.' });
+    }
 }
 
 module.exports = {
-    execute: async (interaction) => {
+    // 1. WYWOŁANIE PANELU (/panel-ticket)
+    execute: async function(interaction) {
         if (!interaction.member.roles.cache.has(CONFIG.ADMIN_ROLE)) {
             return interaction.reply({ content: '❌ Nie posiadasz uprawnień!', flags: [MessageFlags.Ephemeral] });
         }
@@ -103,32 +89,28 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setAuthor({ name: 'VAULT REP SECURITY SYSTEM', iconURL: interaction.guild.iconURL() || null })
             .setTitle('🛡️ CENTRUM WSPARCIA I ZGŁOSZEŃ')
-            .setDescription(
-                'Wybierz odpowiednią kategorię z menu poniżej, aby skontaktować się z administracją.\n\n' +
-                '**🆘 Pomoc** - Problemy techniczne i pytania.\n' +
-                '**🔍 Znajdź** - Pomoc w odnalezieniu konkretnych linków.\n' +
-                '**🤝 Collab** - Propozycje współpracy i partnerstwa.'
-            )
+            .setDescription('Wybierz odpowiednią kategorię z menu poniżej.\n\n**🆘 Pomoc** | **🔍 Znajdź** | **🤝 Collab**')
             .setColor(CONFIG.COLOR)
-            .setImage(CONFIG.IMAGE)
-            .setFooter({ text: 'Prosimy o nienadużywanie systemu ticketów.' });
+            .setImage(CONFIG.IMAGE);
 
         const menu = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
                 .setCustomId('ticket_select')
                 .setPlaceholder('📂 Wybierz cel swojego zgłoszenia...')
                 .addOptions([
-                    { label: 'Pomoc / Wsparcie', value: 'pomoc', emoji: '🆘', description: 'Ogólna pomoc techniczna' },
-                    { label: 'Znajdź Link', value: 'znajdz', emoji: '🔍', description: 'Szukasz konkretnego linku?' },
-                    { label: 'Współpraca', value: 'collab', emoji: '🤝', description: 'Partnerstwa i wspólne projekty' }
+                    { label: 'Pomoc / Wsparcie', value: 'pomoc', emoji: '🆘' },
+                    { label: 'Znajdź Link', value: 'znajdz', emoji: '🔍' },
+                    { label: 'Współpraca', value: 'collab', emoji: '🤝' }
                 ])
         );
 
         await interaction.channel.send({ embeds: [embed], components: [menu] });
-        await interaction.reply({ content: '✅ Panel został pomyślnie wysłany.', flags: [MessageFlags.Ephemeral] });
+        await interaction.reply({ content: '✅ Panel ticketów wysłany.', flags: [MessageFlags.Ephemeral] });
     },
 
-    handleInteraction: async (interaction) => {
+    // 2. OBSŁUGA PRZYCISKÓW I MENU
+    handleInteraction: async function(interaction) {
+        // Menu wyboru
         if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
             const category = interaction.values[0];
             if (category === 'collab') return await createTicketChannel(interaction, 'collab', 'Zgłoszenie w sprawie współpracy.');
@@ -139,89 +121,31 @@ module.exports = {
 
             const input = new TextInputBuilder()
                 .setCustomId('problem_input')
-                .setLabel(category === 'znajdz' ? 'Czego dokładnie szukasz?' : 'Opisz swój problem:')
-                .setPlaceholder('Wpisz tutaj treść zgłoszenia...')
+                .setLabel('Opisz sprawę:')
                 .setStyle(TextInputStyle.Paragraph)
                 .setRequired(true)
                 .setMinLength(10);
 
             modal.addComponents(new ActionRowBuilder().addComponents(input));
-            await interaction.showModal(modal);
+            return await interaction.showModal(modal);
         }
 
-        if (interaction.isModalSubmit()) {
+        // Formularze Modal
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_')) {
             const categoryKey = interaction.customId.split('_')[1];
             const reason = interaction.fields.getTextInputValue('problem_input');
-            await createTicketChannel(interaction, categoryKey, reason);
+            return await createTicketChannel(interaction, categoryKey, reason);
         }
 
+        // Przyciski wewnątrz ticketu
         if (interaction.isButton()) {
-            const channelNameParts = interaction.channel.name.split('-');
-            const categoryName = channelNameParts[1]?.toUpperCase(); 
-            const allowedRoles = CONFIG.ROLES[categoryName] || [];
-
             if (interaction.customId === 'ticket_claim') {
-                if (!allowedRoles.some(roleId => interaction.member.roles.cache.has(roleId))) {
-                    return interaction.reply({ content: '❌ Nie masz uprawnień!', flags: [MessageFlags.Ephemeral] });
-                }
-
-                // Szukamy twórcy ticketu w uprawnieniach (ktoś, kto nie ma ról administracyjnych)
-                const creatorOverwrite = interaction.channel.permissionOverwrites.cache.find(p => 
-                    p.type === 1 && 
-                    !allowedRoles.includes(p.id) && 
-                    p.id !== interaction.client.user.id
-                );
-
-                const creatorId = creatorOverwrite ? creatorOverwrite.id : null;
-
-                // Ustawienie uprawnień: Tylko admin przejmujący + twórca ticketu
-                await interaction.channel.permissionOverwrites.set([
-                    { 
-                        id: interaction.guild.id, 
-                        deny: [PermissionFlagsBits.ViewChannel] 
-                    },
-                    { 
-                        id: interaction.user.id, 
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] 
-                    },
-                    ...(creatorId ? [{ 
-                        id: creatorId, 
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles, PermissionFlagsBits.ReadMessageHistory] 
-                    }] : [])
-                ]);
-
-                await interaction.reply({ embeds: [new EmbedBuilder().setDescription(`🔒 Zgłoszenie przejęte przez **${interaction.user}**.`).setColor(CONFIG.COLOR)] });
-
-                await logAction(interaction.guild, '🔒 Ticket Przejęty', [
-                    { name: 'Moderator', value: `${interaction.user.tag}`, inline: true },
-                    { name: 'Kanał', value: `${interaction.channel.name}`, inline: true }
-                ], 0xFFA500);
+                await interaction.reply({ content: `🔒 Zgłoszenie przejęte przez **${interaction.user}**.`, ephemeral: false });
+                // (Opcjonalnie tutaj zmiana uprawnień kanału)
             }
 
             if (interaction.customId === 'ticket_close') {
-                if (!allowedRoles.some(roleId => interaction.member.roles.cache.has(roleId))) {
-                    return interaction.reply({ content: '❌ Brak uprawnień!', flags: [MessageFlags.Ephemeral] });
-                }
-
-                await interaction.reply('💾 **Generowanie logów... Kanał zostanie usunięty za 5 sekund.**');
-
-                const messages = await interaction.channel.messages.fetch({ limit: 100 });
-                let transcript = `--- TRANSKRYPCJA VAULT REP: ${interaction.channel.name} ---\nData: ${new Date().toLocaleString('pl-PL')}\nZamknął: ${interaction.user.tag}\n----------------------------------------------------\n\n`;
-
-                messages.reverse().forEach(m => {
-                    transcript += `[${m.createdAt.toLocaleString('pl-PL')}] ${m.author.tag}: ${m.content || "[Załącznik/Embed]"}\n`;
-                });
-
-                const attachment = new AttachmentBuilder(Buffer.from(transcript, 'utf-8'), { name: `log-${interaction.channel.name}.txt` });
-
-                const logChannel = await interaction.guild.channels.fetch(CONFIG.LOG_CHANNEL).catch(() => null);
-                if (logChannel) {
-                    await logChannel.send({ 
-                        content: `📁 **Raport: \`${interaction.channel.name}\`**`,
-                        files: [attachment] 
-                    });
-                }
-
+                await interaction.reply('💾 **Kanał zostanie usunięty za 5 sekund.**');
                 setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
             }
         }
