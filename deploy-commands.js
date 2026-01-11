@@ -23,7 +23,7 @@ const commands = [
         .setDescription('Wysyła luksusowy panel informacyjny sekcji Elite (Tylko Zarząd)')
         .setDMPermission(false),
 
-    new SlashCommandBuilder() // DODANO: 14-sta komenda
+    new SlashCommandBuilder()
         .setName('panel-zarobek')
         .setDescription('Wysyła panel współpracy zarobkowej (Zarząd)')
         .setDMPermission(false),
@@ -58,7 +58,12 @@ const commands = [
         .addStringOption(opt => opt.setName('powod').setDescription('Powód ostrzeżenia').setRequired(true))
         .setDMPermission(false),
 
-    // 3. Narzędzia i Linki
+    // 3. Narzędzia i Linki (DODANO OBLICZWAGE)
+    new SlashCommandBuilder()
+        .setName('obliczwage')
+        .setDescription('Otwiera inteligentny kalkulator wagi i ceny paczki VAULT AI')
+        .setDMPermission(false),
+
     new SlashCommandBuilder()
         .setName('link')
         .setDescription('Wysyła link do przedmiotów z informacją o bonusach')
