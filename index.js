@@ -16,7 +16,7 @@ const kalkulator = require('./kalkulator.js');
 const http = require('http');
 require('dotenv').config();
 
-// --- SERWER HTTP (DLA PODTRZYMANIA HOSTINGU) ---
+// --- SERWER HTTP (Uptime) ---
 const port = process.env.PORT || 8080;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -24,7 +24,7 @@ http.createServer((req, res) => {
     res.end();
 }).listen(port);
 
-// --- KONFIGURACJA KLIENTA ---
+// --- KLIENT ---
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -36,10 +36,9 @@ const client = new Client({
 });
 
 const WELCOME_CHANNEL_ID = '1457675865524801568'; 
-const INVITE_LOG_CHANNEL_ID = '1457675879219200033'; 
 const invites = new Collection();
 
-// --- EVENT: READY ---
+// --- READY ---
 client.on('ready', async () => {
     console.log(`✅ VAULT REP: Zalogowano jako ${client.user.tag}`);
     client.user.setPresence({
@@ -48,10 +47,10 @@ client.on('ready', async () => {
     });
 });
 
-// --- EVENT: INTERACTION CREATE (SLASH / PRZYCISKI / MODALE) ---
+// --- INTERAKCJE ---
 client.on('interactionCreate', async interaction => {
     try {
-        // 1. OBSŁUGA KOMEND SLASH (/)
+        // 1. SLASH COMMANDS
         if (interaction.isChatInputCommand()) {
             const { commandName } = interaction;
             
@@ -63,63 +62,65 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
             if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
             
-            // Komendy moderacyjne
             const modCommands = ['ban', 'kick', 'mute', 'warn'];
             if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
         }
 
-        // 2. OBSŁUGA PRZYCISKÓW I FORMULARZY (MODALI)
+        // 2. BUTTONS & MODALS
         if (interaction.isButton() || interaction.isModalSubmit()) {
-            
-            // Priorytet dla Kalkulatora (wszystkie ID zaczynające się od calc_)
-            if (interaction.customId.startsWith('calc_')) {
+            const customId = interaction.customId;
+
+            // Kalkulator
+            if (customId.startsWith('calc_')) {
                 return await kalkulator.handleInteraction(interaction);
             }
 
-            // Obsługa Ticketów i pozostałych interakcji
-            // Używamy .catch, aby błąd w jednym module nie kraszował całego bota
+            // Tickety (usuwamy return, by błąd w ticketach nie blokował reszty)
             await tickets.handleInteraction(interaction).catch(err => console.error("Błąd Ticketów:", err));
+
+            // Jeśli panel-zarobek lub kupony mają własne handleInteraction, dodaj je tutaj:
+            if (typeof panelZarobek.handleInteraction === 'function') {
+                await panelZarobek.handleInteraction(interaction).catch(() => {});
+            }
         }
 
     } catch (err) {
-        console.error("❌ OGÓLNY BŁĄD INTERAKCJI:", err);
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'Wystąpił błąd podczas wykonywania tej akcji.', ephemeral: true }).catch(() => {});
-        }
+        console.error("❌ KRYTYCZNY BŁĄD INTERAKCJI:", err);
     }
 });
 
-// --- EVENT: MESSAGE CREATE (KOMENDY TEKSTOWE !) ---
+// --- WIADOMOŚCI ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    // Logowanie wiadomości (Debug)
-    // console.log(`[DEBUG] ${message.author.username}: ${message.content}`);
-
-    // Komenda !obliczwage
     if (message.content === '!obliczwage') {
-        console.log(`[SYSTEM] Uruchamiam kalkulator dla ${message.author.username}`);
         try {
-            return await kalkulator.execute(message);
+            await kalkulator.execute(message);
         } catch (err) {
             console.error("❌ BŁĄD KALKULATORA:", err);
         }
     }
 
-    // Komenda testowa powitań
     if (message.content === '!powitania-test') {
-        const embed = createWelcomeEmbed(message.member);
-        await message.channel.send({ embeds: [embed] });
+        try {
+            const embed = createWelcomeEmbed(message.member);
+            await message.channel.send({ embeds: [embed] });
+        } catch (err) {
+            console.error("❌ BŁĄD TESTU POWITANIA:", err);
+        }
     }
 });
 
-// --- EVENT: GUILD MEMBER ADD (POWITANIA) ---
+// --- POWITANIA ---
 client.on('guildMemberAdd', async (member) => {
-    const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-    if (welcomeChannel) {
-        await welcomeChannel.send({ embeds: [createWelcomeEmbed(member)] }).catch(e => console.log("Błąd powitania:", e));
+    try {
+        const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+        if (welcomeChannel) {
+            await welcomeChannel.send({ embeds: [createWelcomeEmbed(member)] });
+        }
+    } catch (err) {
+        console.log("Błąd powitania:", err);
     }
 });
 
-// --- LOGOWANIE BOTA ---
 client.login(process.env.TOKEN);
