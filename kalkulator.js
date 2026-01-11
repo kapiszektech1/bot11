@@ -48,7 +48,7 @@ function createProgressBar(currentWeight) {
 
 function createMainPanel(target, cart) {
     const user = target.author || target.user;
-    const userName = user ? user.username : 'Gościu';
+    const userName = user ? user.username : 'Użytkownik';
     const avatar = user ? user.displayAvatarURL() : null;
     const totalW = cart.reduce((s, i) => s + i.weight, 0);
     const itemCount = cart.length;
@@ -101,6 +101,7 @@ module.exports = {
             if (!global.vaultCarts.has(userId)) global.vaultCarts.set(userId, []);
             let cart = global.vaultCarts.get(userId);
 
+            // --- OTWARCIE MODALA ---
             if (interaction.customId === 'calc_add') {
                 const modal = new ModalBuilder().setCustomId('calc_modal_ai').setTitle('➕ DODAJ DO PACZKI');
                 modal.addComponents(
@@ -111,8 +112,9 @@ module.exports = {
                 return await interaction.showModal(modal);
             }
 
+            // --- OBSŁUGA FORMULARZA DODAWANIA ---
             if (interaction.customId === 'calc_modal_ai') {
-                if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
+                await interaction.deferUpdate(); // Kluczowe dla szybkości odpowiedzi
                 const nameIn = interaction.fields.getTextInputValue('name');
                 const sizeIn = interaction.fields.getTextInputValue('size');
                 const manualIn = interaction.fields.getTextInputValue('weight_manual');
@@ -128,19 +130,25 @@ module.exports = {
                 if (sizeIn) displayName += ` [${sizeIn.toUpperCase()}]`;
 
                 cart.push({ name: displayName, weight });
+                global.vaultCarts.set(userId, cart); // Zapisujemy zmiany
                 await interaction.editReply(createMainPanel(interaction, cart));
             }
 
+            // --- USUWANIE OSTATNIEGO ---
             if (interaction.customId === 'calc_remove') {
-                if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
+                await interaction.deferUpdate();
                 cart.pop();
+                global.vaultCarts.set(userId, cart); // Zapisujemy zmiany
                 await interaction.editReply(createMainPanel(interaction, cart));
             }
 
+            // --- WYCENA ---
             if (interaction.customId === 'calc_summary') {
-                if (!interaction.deferred && !interaction.replied) await interaction.deferReply({ ephemeral: false });
-                if (cart.length === 0) return await interaction.editReply({ content: '❌ Koszyk jest pusty!' });
+                if (cart.length === 0) {
+                    return await interaction.reply({ content: '❌ Koszyk jest pusty!', ephemeral: true });
+                }
 
+                await interaction.deferReply({ ephemeral: false });
                 const tW = cart.reduce((a, b) => a + b.weight, 0);
                 const cena = (31.91 + (Math.ceil(tW / 500) - 1) * 30.96 + 37.63).toFixed(2);
 
@@ -158,10 +166,11 @@ module.exports = {
 
                 await interaction.editReply({ embeds: [embedS] });
 
-                // TUTORIAL O KTÓRY PROSIŁEŚ - TERAZ POJAWI SIĘ POD PODSUMOWANIEM
                 const tutorial = `# 📦 WITAMY W KALKULATORZE!\n> **Chcesz obliczyć wagę i cenę swojej paczki? To proste!**\n\nWpisz komendę: \`!obliczwage\` aby bot przygotował Twój osobisty panel zarządzania przedmiotami.`;
                 await interaction.followUp({ content: tutorial, ephemeral: false });
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error("Błąd w kalkulator.js:", err); 
+        }
     }
 };
