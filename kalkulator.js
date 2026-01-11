@@ -1,13 +1,11 @@
 const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
-// Baza danych wag - 02,03, tutaj bot szuka słów kluczowych
+// Twoja baza wag
 const wagiBaza = {
-    buty: 1400, jordan: 1450, dunk: 1300, af1: 1400, adidas: 1200, yeezy: 1100,
-    bluza: 900, hoodie: 950, trapstar: 850, corteiz: 800, tracksuit: 1100,
-    koszulka: 250, tee: 280, tshirt: 250, shirt: 250,
-    kurtka: 1200, jacket: 1300, puffer: 1500,
-    spodnie: 700, pants: 750, jeans: 800,
-    skarpetki: 50, socks: 50, czapka: 150, cap: 150
+    jordan: 1450, dunk: 1300, af1: 1400, buty: 1400,
+    hoodie: 950, bluza: 900, trapstar: 850, corteiz: 800,
+    tee: 250, shirt: 250, koszulka: 250,
+    jacket: 1200, puffer: 1500, spodnie: 750
 };
 
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
@@ -15,8 +13,6 @@ if (!global.vaultCarts) { global.vaultCarts = new Map(); }
 function createMainPanel(interaction) {
     const userId = interaction.user.id;
     const cart = global.vaultCarts.get(userId) || [];
-    
-    // Obliczamy sumę bezpiecznie, pilnując by waga była liczbą
     const totalWeight = cart.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
 
     const embed = new EmbedBuilder()
@@ -24,7 +20,7 @@ function createMainPanel(interaction) {
         .setDescription(`Witaj **${interaction.user.username}**!\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `> **${n+1}.** ${i.name} — \`${i.weight}g\``).join('\n') || "_Koszyk jest pusty..._"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalWeight}g\``)
         .setColor(0x00008B)
         .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png')
-        .setFooter({ text: 'VAULT REP • System szacowania wagi' });
+        .setFooter({ text: 'VAULT REP • Kalkulator v2' });
 
     const row = new ActionRowBuilder().addComponents(
         { type: 2, style: 1, label: '➕ DODAJ', custom_id: 'calc_add' },
@@ -56,35 +52,29 @@ module.exports = {
             return await interaction.showModal(modal).catch(() => {});
         }
 
+        // Akcje po wysłaniu modala lub kliknięciu przycisku
         if (interaction.isModalSubmit() || interaction.isButton()) {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
+            // Natychmiastowe uciszenie Discorda
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferUpdate().catch(() => {});
+            }
 
             if (interaction.customId === 'modal_ai') {
-                const nameInput = interaction.fields.getTextInputValue('name');
-                const sizeInput = interaction.fields.getTextInputValue('size');
-                const manualInput = interaction.fields.getTextInputValue('weight_manual');
+                const nameIn = interaction.fields.getTextInputValue('name');
+                const sizeIn = interaction.fields.getTextInputValue('size');
+                const manualIn = interaction.fields.getTextInputValue('weight_manual');
                 
-                // --- LOGIKA WYBORU WAGI ---
-                let finalWeight = 800; // Domyślna
-
-                if (manualInput && !isNaN(manualInput)) {
-                    finalWeight = parseInt(manualInput);
+                let waga = 800;
+                if (manualIn && !isNaN(manualIn)) {
+                    waga = parseInt(manualIn);
                 } else {
-                    // Szukamy w bazie
-                    const n = nameInput.toLowerCase();
-                    for (const [key, value] of Object.entries(wagiBaza)) {
-                        if (n.includes(key)) {
-                            finalWeight = value;
-                            break;
-                        }
+                    const n = nameIn.toLowerCase();
+                    for (let klucz in wagiBaza) {
+                        if (n.includes(klucz)) { waga = wagiBaza[klucz]; break; }
                     }
                 }
                 
-                cart.push({ 
-                    name: sizeInput ? `${nameInput} [${sizeInput}]` : nameInput, 
-                    weight: Number(finalWeight) 
-                });
-
+                cart.push({ name: sizeIn ? `${nameIn} [${sizeIn}]` : nameIn, weight: waga });
                 global.vaultCarts.set(userId, cart);
                 await interaction.editReply(createMainPanel(interaction)).catch(() => {});
             }
@@ -96,24 +86,22 @@ module.exports = {
             }
 
             if (interaction.customId === 'calc_summary') {
-                if (cart.length === 0) return await interaction.followUp({ content: '❌ Koszyk jest pusty!', ephemeral: true });
+                if (cart.length === 0) return;
 
-                const totalWeight = cart.reduce((a, b) => a + b.weight, 0);
-                const units = Math.ceil(totalWeight / 500);
-                const totalCost = (31.91 + (units - 1) * 30.96 + 37.63).toFixed(2);
+                const tW = cart.reduce((a, b) => a + b.weight, 0);
+                const cena = (31.91 + (Math.ceil(tW / 500) - 1) * 30.96 + 37.63).toFixed(2);
 
-                const summaryEmbed = new EmbedBuilder()
+                const embedS = new EmbedBuilder()
                     .setTitle('📊 FINALNA WYCENA VAULT REP')
                     .setColor(0x00FF00)
                     .addFields(
-                        { name: '⚖️ Waga całkowita:', value: `> **${totalWeight}g**`, inline: true },
-                        { name: '💰 Cena (ETL):', value: `> **${totalCost} PLN**`, inline: true },
-                        { name: '🚀 KUPON:', value: 'Kod **lucky8**: [ZAREJESTRUJ SIĘ](https://ikako.vip/r/xhm44)' }
+                        { name: '⚖️ Waga całkowita:', value: `> **${tW}g**`, inline: true },
+                        { name: '💰 Cena (ETL):', value: `> **${cena} PLN**`, inline: true }
                     )
                     .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848869591519414/2eHEXQxjAULa95rfIgEmY8lbP85-mobile.jpg');
 
-                await interaction.followUp({ embeds: [summaryEmbed] }).catch(() => {});
-                await interaction.followUp({ content: "# ✨ WITAMY!\nJEŚLI CHCESZ PONOWNIE OBLICZYĆ WAGĘ, WPISZ KOMENDĘ: `/obliczwage` 📦" }).catch(() => {});
+                await interaction.followUp({ embeds: [embedS] }).catch(() => {});
+                await interaction.followUp({ content: "# ✨ WITAMY!\nWPISZ `/obliczwage`, ABY ZACZĄĆ OD NOWA 📦" }).catch(() => {});
             }
         }
     }
