@@ -1,25 +1,21 @@
 const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Inicjalizacja AI - sprawdzamy czy klucz istnieje
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-const aiModel = genAI ? genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
+// Inicjalizacja AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// PANCERNY ZAPIS KOSZYKA (Globalny)
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
 
 async function getWeightFromAI(itemName, size) {
-    if (!aiModel) return 557; // Brak klucza API w systemie
     try {
-        const prompt = `Podaj TYLKO liczbę (gramy) dla: "${itemName}" ${size ? `rozmiar ${size}` : ''}. Buty 1400, Hoodie 900, T-shirt 250, Kurtka 1200. Sama liczba.`;
+        const prompt = `Return ONLY a number (grams) for: ${itemName} ${size || ''}. Average weights: Shoes 1400, Hoodie 900, T-shirt 250.`;
         const result = await aiModel.generateContent(prompt);
         const text = result.response.text();
         const weight = parseInt(text.replace(/\D/g, ''));
-        return isNaN(weight) ? 558 : weight;
+        return isNaN(weight) ? 501 : weight;
     } catch (e) {
-        console.error("BŁĄD AI:", e);
-        return 559; // Błąd techniczny połączenia
+        return 502; 
     }
 }
 
@@ -55,17 +51,12 @@ module.exports = {
 
     handleInteraction: async (interaction) => {
         const userId = interaction.user.id;
-        
-        // Zapewniamy, że koszyk zawsze istnieje w pamięci
-        if (!global.vaultCarts.has(userId)) {
-            global.vaultCarts.set(userId, []);
-        }
-        
+        if (!global.vaultCarts.has(userId)) global.vaultCarts.set(userId, []);
         let cart = global.vaultCarts.get(userId);
 
         if (interaction.customId === 'calc_add') {
             const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('Dodaj przedmiot');
-            const r1 = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("Co chcesz dodać?").setStyle(1).setRequired(true));
+            const r1 = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("Model produktu").setStyle(1).setRequired(true));
             const r2 = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("Rozmiar").setStyle(1).setRequired(false));
             const r3 = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('weight_manual').setLabel("Waga ręcznie (g)").setStyle(1).setRequired(false));
             modal.addComponents(r1, r2, r3);
@@ -73,7 +64,7 @@ module.exports = {
         }
 
         if (interaction.isModalSubmit() && interaction.customId === 'modal_ai') {
-            await interaction.deferUpdate();
+            await interaction.deferUpdate().catch(() => {});
             const name = interaction.fields.getTextInputValue('name');
             const size = interaction.fields.getTextInputValue('size');
             const manual = interaction.fields.getTextInputValue('weight_manual');
@@ -86,19 +77,16 @@ module.exports = {
         }
 
         if (interaction.customId === 'calc_remove') {
+            await interaction.deferUpdate().catch(() => {});
             cart.pop();
             global.vaultCarts.set(userId, cart);
             await interaction.editReply(createMainPanel(interaction));
         }
 
         if (interaction.customId === 'calc_summary') {
-            const currentCart = global.vaultCarts.get(userId);
+            if (cart.length === 0) return await interaction.reply({ content: '❌ Koszyk jest pusty!', ephemeral: true });
 
-            if (!currentCart || currentCart.length === 0) {
-                return await interaction.reply({ content: '❌ Nie udało się pobrać przedmiotów. Spróbuj dodać je ponownie.', ephemeral: true });
-            }
-
-            const totalWeight = currentCart.reduce((a, b) => a + b.weight, 0);
+            const totalWeight = cart.reduce((a, b) => a + b.weight, 0);
             const units = Math.ceil(totalWeight / 500);
             const totalCost = (31.91 + (units - 1) * 30.96 + 37.63).toFixed(2);
 
@@ -112,7 +100,11 @@ module.exports = {
                 )
                 .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848869591519414/2eHEXQxjAULa95rfIgEmY8lbP85-mobile.jpg');
 
+            // --- WYSYŁKA PODSUMOWANIA I WIADOMOŚCI KOŃCOWEJ ---
             await interaction.reply({ embeds: [summaryEmbed] });
+            await interaction.followUp({ 
+                content: "# ✨ WITAMY!\nJEŚLI CHCESZ PONOWNIE OBLICZYĆ WAGĘ I CENĘ SWOJEJ PACZKI, WPISZ KOMENDĘ: `/obliczwage` 📦" 
+            });
         }
     }
 };
