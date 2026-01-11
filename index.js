@@ -12,6 +12,7 @@ const moderacja = require('./moderacja.js');
 const narzedzia = require('./narzedzia.js');
 const regulaminPanel = require('./regulaminpanel.js');
 const panelZarobek = require('./panel-zarobek.js'); 
+const kalkulator = require('./kalkulator.js'); // DODANO: Import kalkulatora AI
 const http = require('http');
 require('dotenv').config();
 
@@ -56,7 +57,6 @@ client.on('ready', async () => {
         tiktok.checkTikTok(client);
     }, 300000); 
     
-    // Pobieranie zaproszeń przy starcie
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
@@ -70,6 +70,7 @@ client.on('ready', async () => {
 
 // --- OBSŁUGA INTERAKCJI ---
 client.on('interactionCreate', async interaction => {
+    // 1. Obsługa Komend Slash
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
         if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
@@ -78,6 +79,9 @@ client.on('interactionCreate', async interaction => {
         if (commandName === 'elite-panel') return await elitePanel.execute(interaction);
         if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
         if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
+        
+        // DODANO: Obsługa kalkulatora AI
+        if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
 
         const modCommands = ['ban', 'kick', 'mute', 'warn'];
         if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
@@ -85,6 +89,15 @@ client.on('interactionCreate', async interaction => {
         const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
         if (toolCommands.includes(commandName)) return await narzedzia.execute(interaction);
     }
+
+    // 2. Obsługa Przycisków i Modali (Kalkulator AI)
+    if (interaction.isButton() || interaction.isModalSubmit()) {
+        if (interaction.customId.startsWith('calc_') || interaction.customId.startsWith('modal_ai')) {
+            return await kalkulator.handleInteraction(interaction);
+        }
+    }
+
+    // 3. Obsługa Ticketów
     try {
         await tickets.handleInteraction(interaction);
     } catch (err) {
@@ -96,30 +109,21 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
     await pingOsoby.handleRolePing(oldMember, newMember);
 });
 
-// --- POPRAWIONA SEKCJA ZAPROSZEŃ DLA 02,03 ---
 client.on('guildMemberAdd', async (member) => {
-    // 1. Powitanie
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
         const welcomeEmbed = createWelcomeEmbed(member);
         await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
     }
 
-    // 2. Logika Zaproszeń
     const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
     if (logChannel) {
         try {
             const newInvites = await member.guild.invites.fetch();
             const oldInvites = invites.get(member.guild.id);
-            
-            // Szukamy użytego kodu
             const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
             const inviter = invite ? invite.inviter : null;
-
-            // Aktualizacja pamięci
             invites.set(member.guild.id, new Collection(newInvites.map(inv => [inv.code, inv.uses])));
-
-            // Wysyłanie embeda z zaproszenia.js
             const inviteEmbed = createLuxuryInviteEmbed(member, inviter);
             await logChannel.send({ embeds: [inviteEmbed] });
         } catch (e) {
