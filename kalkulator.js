@@ -1,31 +1,43 @@
 const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require('fs');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// Używamy globalnego obiektu do przechowywania koszyków
-if (!global.userCarts) {
-    global.userCarts = new Map();
+// --- SYSTEM ZAPISU DANYCH (JSON) ---
+const DB_FILE = './carts_db.json';
+
+function saveCart(userId, cart) {
+    let data = {};
+    if (fs.existsSync(DB_FILE)) data = JSON.parse(fs.readFileSync(DB_FILE));
+    data[userId] = cart;
+    fs.writeFileSync(DB_FILE, JSON.stringify(data));
 }
 
+function getCart(userId) {
+    if (!fs.existsSync(DB_FILE)) return [];
+    const data = JSON.parse(fs.readFileSync(DB_FILE));
+    return data[userId] || [];
+}
+
+// --- NAPRAWIONA FUNKCJA AI ---
 async function getWeightFromAI(itemName, size) {
     try {
-        const prompt = `Podaj TYLKO liczbę (gramy) dla: "${itemName}" ${size ? `rozmiar ${size}` : ''}. Zasady: Buty z boxem 1400, Hoodie 900, T-shirt 250, Kurtka 1200. Podaj samą liczbę.`;
+        const prompt = `Podaj TYLKO liczbę (gramy) dla: "${itemName}" ${size ? `rozmiar ${size}` : ''}. Buty 1400, Hoodie 900, Koszulka 250. Sama liczba.`;
         const result = await aiModel.generateContent(prompt);
-        const text = result.response.text();
+        // Naprawiony odczyt tekstu
+        const text = await result.response.text();
         const weight = parseInt(text.replace(/\D/g, ''));
-        console.log(`🤖 AI LOG: ${itemName} -> ${weight}g`);
         return isNaN(weight) || weight < 50 ? 500 : weight;
     } catch (e) {
-        console.error("❌ BŁĄD AI:", e.message);
-        return 500;
+        console.error("Błąd AI:", e);
+        return 550; // Zmienione na 550, żebyś widział, że AI nie pykło
     }
 }
 
 function createMainPanel(interaction) {
-    const userId = interaction.user.id;
-    const cart = global.userCarts.get(userId) || [];
+    const cart = getCart(interaction.user.id);
     const totalWeight = cart.reduce((sum, item) => sum + item.weight, 0);
 
     const embed = new EmbedBuilder()
@@ -48,14 +60,12 @@ function createMainPanel(interaction) {
 
 module.exports = {
     execute: async (interaction) => {
-        global.userCarts.set(interaction.user.id, []);
+        saveCart(interaction.user.id, []);
         await interaction.reply(createMainPanel(interaction));
     },
 
     handleInteraction: async (interaction) => {
         const userId = interaction.user.id;
-        if (!global.userCarts.has(userId)) global.userCarts.set(userId, []);
-        let cart = global.userCarts.get(userId);
 
         if (interaction.customId === 'calc_add') {
             const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('Dodaj przedmiot');
@@ -74,20 +84,22 @@ module.exports = {
             
             const weight = (manual && !isNaN(manual)) ? parseInt(manual) : await getWeightFromAI(name, size);
             
+            const cart = getCart(userId);
             cart.push({ name: size ? `${name} [${size}]` : name, weight });
-            global.userCarts.set(userId, cart);
+            saveCart(userId, cart);
+            
             await interaction.editReply(createMainPanel(interaction));
         }
 
         if (interaction.customId === 'calc_remove') {
+            const cart = getCart(userId);
             cart.pop();
-            global.userCarts.set(userId, cart);
+            saveCart(userId, cart);
             await interaction.editReply(createMainPanel(interaction));
         }
 
         if (interaction.customId === 'calc_summary') {
-            // SPRAWDZENIE KOSZYKA Z GLOBALNEJ ZMIENNEJ
-            const finalCart = global.userCarts.get(userId) || [];
+            const finalCart = getCart(userId);
             
             if (finalCart.length === 0) {
                 return await interaction.reply({ content: '❌ Twój koszyk jest pusty!', ephemeral: true });
@@ -100,11 +112,12 @@ module.exports = {
             const summary = new EmbedBuilder()
                 .setTitle('📊 FINALNA WYCENA VAULT REP')
                 .setColor(0x2ECC71)
+                .setDescription(`Szacowany koszt wysyłki dla wagi **${totalWeight}g**:`)
                 .addFields(
-                    { name: '⚖️ Łączna waga:', value: `> **${totalWeight}g**`, inline: true },
                     { name: '💰 Cena dostawy:', value: `> **${totalCost} PLN**`, inline: true },
-                    { name: '🚀 KUPON:', value: 'Kod **lucky8** (56 PLN taniej): [ZAREJESTRUJ SIĘ](https://ikako.vip/r/xhm44)' }
-                );
+                    { name: '🚀 KUPON:', value: 'Kod **lucky8**: [KLIKNIJ TUTAJ](https://ikako.vip/r/xhm44)' }
+                )
+                .setFooter({ text: 'Cena obliczona dla najtańszej linii ETL' });
 
             await interaction.reply({ embeds: [summary] });
         }
