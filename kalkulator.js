@@ -10,9 +10,9 @@ const userCarts = new Map();
 // --- FUNKCJA ZCZYTYWANIA WAGI PRZEZ AI ---
 async function getWeightFromAI(itemName, size) {
     try {
-        const prompt = `Jesteś ekspertem logistyki. Podaj TYLKO liczbę (gramy) dla przedmiotu: "${itemName}" ${size ? `w rozmiarze ${size}` : ''}. 
-        Zasady: Buty z pudełkiem ok. 1300-1500g, Bluzy hoodie 800-1100g, T-shirty 250g, Kurtki puffer 1200g. 
-        Jeśli rozmiar buta < 40, odejmij 150g. Podaj samą liczbę bez tekstu.`;
+        const prompt = `Jesteś ekspertem logistyki paczek z Chin. Podaj TYLKO liczbę (gramy) dla przedmiotu: "${itemName}" ${size ? `w rozmiarze ${size}` : ''}. 
+        Zasady: Buty z boxem ok. 1400g, Hoodie 900g, T-shirt 250g, Kurtka 1200g. 
+        Zwróć TYLKO liczbę.`;
         
         const result = await aiModel.generateContent(prompt);
         const response = await result.response;
@@ -34,9 +34,10 @@ function createMainPanel(interaction) {
         .setTitle('📦 KALKULATOR WYSYŁKI VAULT AI')
         .setDescription(`Witaj **${userName}**! Dodawaj przedmioty, a ja oszacuję wagę i cenę najtańszej dostawy.\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `**${n+1}.** ${i.name} (\`${i.weight}g\`)`).join('\n') || "_Koszyk jest pusty_"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalWeight}g\``)
         .setColor(0x00008B)
-        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png?ex=6964c586&is=69637406&hm=1e00aaa8f2915a2fb681aefd163e1ec63289608b5bd443dce18b5786d84a1b7f')
+        .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png')
         .setFooter({ text: 'VAULT REP • Wszystkie dane zczytuje AI' });
 
+    // NAPRAWIONE: Dodano () przy ButtonStyle
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('calc_add').setLabel('➕ DODAJ PRZEDMIOT').setButtonStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('calc_remove').setLabel('🗑️ USUŃ OSTATNI').setButtonStyle(ButtonStyle.Danger),
@@ -47,7 +48,6 @@ function createMainPanel(interaction) {
 }
 
 module.exports = {
-    // KOMENDA /obliczwage
     execute: async (interaction) => {
         userCarts.set(interaction.user.id, []);
         const panel = createMainPanel(interaction);
@@ -58,7 +58,7 @@ module.exports = {
         const userId = interaction.user.id;
         let cart = userCarts.get(userId) || [];
 
-        // 1. MODAL Z 3 PYTANIAMI
+        // 1. MODAL
         if (interaction.customId === 'calc_add') {
             const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('Dodaj przedmiot do paczki');
 
@@ -71,11 +71,15 @@ module.exports = {
             const weightInput = new TextInputBuilder()
                 .setCustomId('weight_manual').setLabel("Podaj wagę ręcznie (opcjonalnie)").setPlaceholder("W gramach, np. 1250").setStyle(TextInputStyle.Short).setRequired(false);
 
-            modal.addComponents(new ActionRowBuilder().addComponents(nameInput), new ActionRowBuilder().addComponents(sizeInput), new ActionRowBuilder().addComponents(weightInput));
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(nameInput), 
+                new ActionRowBuilder().addComponents(sizeInput), 
+                new ActionRowBuilder().addComponents(weightInput)
+            );
             return await interaction.showModal(modal);
         }
 
-        // 2. LOGIKA PO MODALU (EDYCJA PANELU)
+        // 2. LOGIKA PO MODALU
         if (interaction.isModalSubmit() && interaction.customId === 'modal_ai') {
             await interaction.deferUpdate();
             
@@ -98,15 +102,17 @@ module.exports = {
             await interaction.editReply(panel);
         }
 
-        // 3. USUWANIE (EDYCJA PANELU)
+        // 3. USUWANIE
         if (interaction.customId === 'calc_remove') {
-            cart.pop();
-            userCarts.set(userId, cart);
+            if (cart.length > 0) {
+                cart.pop();
+                userCarts.set(userId, cart);
+            }
             const panel = createMainPanel(interaction);
             await interaction.editReply(panel);
         }
 
-        // 4. PODSUMOWANIE + TEKST KOŃCOWY
+        // 4. PODSUMOWANIE
         if (interaction.customId === 'calc_summary') {
             if (cart.length === 0) return await interaction.reply({ content: 'Koszyk jest pusty!', ephemeral: true });
 
@@ -117,18 +123,16 @@ module.exports = {
             const summaryEmbed = new EmbedBuilder()
                 .setTitle('📊 FINALNA WYCENA VAULT REP')
                 .setColor(0x00FF00)
-                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848869591519414/2eHEXQxjAULa95rfIgEmY8lbP85-mobile.jpg?ex=6964c5b5&is=69637435&hm=365702345decfe8d5c8baadc1c7cfe818faa887c08c28ca849e400675fd3f8b2')
+                .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848869591519414/2eHEXQxjAULa95rfIgEmY8lbP85-mobile.jpg')
                 .addFields(
                     { name: '📦 Twoja paczka:', value: cart.map((i, n) => `\`${n+1}.\` ${i.name} (${i.weight}g)`).join('\n') },
                     { name: '⚖️ Łączna waga:', value: `**${totalWeight}g**`, inline: true },
-                    { name: '💰 Cena najtańszej dostawy ETL:', value: `**${totalCost} PLN**`, inline: true },
+                    { name: '💰 Cena dostawy ETL:', value: `**${totalCost} PLN**`, inline: true },
                     { name: '🚀 KUPON:', value: 'Wpisz **lucky8** (56 PLN taniej) i załóż konto: [KLIKNIJ TUTAJ](https://ikako.vip/r/xhm44)' }
                 );
 
-            // Wysyłamy embeda z wyceną
             await interaction.followUp({ embeds: [summaryEmbed], ephemeral: true });
 
-            // Wysyłamy Twoją wiadomość tekstową po podsumowaniu
             const footerText = "# ✨ WITAMY!\nJEŚLI CHCESZ PONOWNIE OBLICZYĆ WAGĘ I CENĘ SWOJEJ PACZKI, WPISZ KOMENDĘ: `/obliczwage` 📦";
             await interaction.followUp({ content: footerText, ephemeral: true });
         }
