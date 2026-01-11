@@ -2,24 +2,25 @@ const { EmbedBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInpu
 
 const MY_ID = '1419055461776228523';
 
-// GIGANTYCZNA BAZA 2026 – 02,03, TU JEST WSZYSTKO
+// GIGANTYCZNA BAZA – 02,03, TU JEST ABSOLUTNIE WSZYSTKO
 const wagiBaza = {
-    // --- KOSZULKI PIŁKARSKIE (TOTAL) ---
-    'koszulka piłkarska': 250, 'koszulka pilkarska': 250, 'jersey': 250, 'strój piłkarski': 400,
-    'real madryt': 250, 'barcelona': 250, 'manchester': 250, 'bayern': 250, 'reprezentacja': 250,
-    'getry': 100, 'spodenki piłkarskie': 200, 'retro jersey': 300,
+    // --- KOSZULKI PIŁKARSKIE & SPORT (TOTAL) ---
+    'koszulka piłkarska': 250, 'koszulka pilkarska': 250, 'jersey': 250, 'strój piłkarski': 450,
+    'real madryt': 260, 'barcelona': 260, 'manchester': 260, 'bayern': 260, 'reprezentacja': 260,
+    'arsenal': 260, 'chelsea': 260, 'psg': 260, 'juventus': 260, 'milan': 260, 'inter': 260,
+    'getry': 120, 'spodenki piłkarskie': 220, 'retro jersey': 300, 'NBA jersey': 350,
 
     // --- BUTY: NIKE & JORDAN ---
     'jordan 4': 1450, 'j4': 1450, 'jordan 1': 1200, 'j1': 1200, 'jordan 11': 1550, 'j11': 1550, 'jordan 3': 1400, 'j3': 1400,
     'nike tn': 1100, 'tn': 1100, 'plusy': 1100, 'tuned': 1100, 'air max 95': 1200, '95tki': 1200, 'air max 98': 1100, 'air max 97': 1100,
     'dunki': 1050, 'dunk': 1050, 'sb dunk': 1100, 'force': 1300, 'af1': 1300, 'air force': 1300, 'shox': 1150, 'shoxy': 1150,
-    'vapormax': 900, 'presto': 800, 'huarache': 900, 'cortez': 800, 'nike tech': 1100, 'zoom': 1000, 'kobe': 1100, 'kd': 1100,
+    'vapormax': 900, 'presto': 800, 'huarache': 900, 'cortez': 800, 'nike tech': 1100, 'zoom': 1000, 'kobe': 1100, 'kd': 1100, 'lebron': 1300,
 
-    // --- BUTY: INNE MARKI ---
+    // --- BUTY: ADIDAS, NB, YEEZY & INNE ---
     'samba': 850, 'gazelle': 800, 'campus': 1050, 'yeezy 350': 900, 'yeezy 500': 1100, 'yeezy 700': 1200, 'slide': 650, 'klapki': 600,
     'foam runner': 550, 'nb 9060': 1350, 'nb 530': 850, 'nb 2002r': 1100, 'nb 550': 1150, 'nb 1906': 1150, 'bapesta': 1250, 'bape buty': 1250,
     'rick owens': 1800, 'ramones': 1600, 'jumbo': 2000, 'balenciaga track': 2200, 'triple s': 2500, 'defender': 2200, 'lanvin': 1600,
-    'timberland': 1900, 'ugg': 900, 'doc martens': 1800, 'converse': 800, 'vans': 800,
+    'timberland': 1900, 'ugg': 900, 'doc martens': 1800, 'converse': 800, 'vans': 800, 'alexander mcqueen': 1200,
 
     // --- SPODNIE & SPODENKI ---
     'jeansy': 950, 'dzinsy': 950, 'dżinsy': 950, 'baggy': 1100, 'big boy': 1100, 'polar big boy': 1100, 'janki': 1000, 'jaded': 1000,
@@ -27,22 +28,25 @@ const wagiBaza = {
     'dzwony': 850, 'flare': 850, 'ee': 280, 'eric emanuel': 280, 'spodenki': 400, 'szorty': 350, 'kąpielówki': 250, 'mesh': 280,
     'corteiz shorts': 450, 'trapstar shorts': 450, 'spodenki dresowe': 450, 'gacie': 150, 'bokserki': 150, 'majtki': 100,
 
-    // --- SKARPETKI & BIELIZNA ---
+    // --- SKARPETKI & BIELIZNA (MAX DETAL) ---
     'skarpetki': 60, 'skarpety': 60, 'stopki': 40, 'skarpetki nike': 70, 'skarpetki wysokie': 80, 'podkolanówki': 100, 'skarpetki bape': 70,
+    'skarpety piłkarskie': 120, 'skarpety antypoślizgowe': 100,
 
     // --- GÓRA & KURTKI ---
     'bluza': 900, 'hoodie': 950, 'zip': 1000, 'bluza rozpinana': 1000, 'kurtka': 1300, 'puchówka': 1400, 'puchowka': 1400, 'nuptse': 1100,
     'tnf': 1100, 'moncler': 1250, 'maya': 1250, 'canada goose': 2100, 'kamizelka': 800, 'bezrękawnik': 800, 'wiatrówka': 500, 'arc teryx': 700,
-    'koszulka': 280, 'teciak': 280, 't-shirt': 280, 'polo': 300, 'longsleeve': 400, 'tank top': 200,
+    'koszulka': 280, 'teciak': 280, 't-shirt': 280, 'polo': 300, 'longsleeve': 400, 'tank top': 200, 'sweter': 700, 'koszula': 400,
 
     // --- AKCESORIA: BIŻUTERIA & DODATKI ---
     'okulary': 150, 'gały': 150, 'sunglasses': 150, 'biżuteria': 100, 'łańcuch': 250, 'naszyjnik': 150, 'bransoletka': 100,
     'sygnet': 80, 'pierścionek': 50, 'kolczyki': 50, 'zegarek': 400, 'watch': 400, 'rolex': 450, 'casio': 200, 'pasek': 350,
-    'belt': 350, 'bb belt': 550, 'czapka': 180, 'beanie': 150, 'kominiarka': 150, 'szalik': 300, 'rękawiczki': 200,
+    'belt': 350, 'bb belt': 550, 'czapka': 180, 'beanie': 150, 'kominiarka': 150, 'szalik': 300, 'rękawiczki': 200, 'parasol': 500,
 
-    // --- GADŻETY & DOM ---
-    'plecak': 1100, 'torba': 800, 'nerka': 400, 'sidebag': 400, 'portfel': 200, 'etui': 100, 'case': 100, 'breloczek': 50,
-    'perfumy': 400, 'słuchawki': 300, 'airpods': 150, 'głośnik': 1000, 'dywan': 2500, 'pościel': 1800, 'ręcznik': 600, 'lego': 1000
+    // --- GADŻETY, ELEKTRONIKA & DOM ---
+    'plecak': 1100, 'backpack': 1100, 'torba': 800, 'bag': 800, 'nerka': 400, 'saszetka': 400, 'sidebag': 400, 'portfel': 200,
+    'etui': 100, 'case': 100, 'breloczek': 50, 'zapalniczka': 100, 'popielniczka': 500, 'dywan': 2500, 'pościel': 1800,
+    'ręcznik': 600, 'perfumy': 400, 'kabel': 150, 'słuchawki': 300, 'airpods': 150, 'głośnik': 1000, 'powerbank': 400,
+    'podkładka': 500, 'plakat': 200, 'figurka': 600, 'kaws': 800, 'lego': 1000, 'naklejki': 20
 };
 
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
@@ -78,7 +82,7 @@ module.exports = {
         if (interaction.customId === 'calc_add') {
             const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('DODAJ PRODUKT');
             modal.addComponents(
-                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("CO DODAJESZ?").setPlaceholder("np. Koszulka Real Madryt, Jordan 4, Skarpetki").setStyle(1).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("CO DODAJESZ?").setPlaceholder("np. Koszulka Real Madryt, Nike TN, Skarpetki").setStyle(1).setRequired(true)),
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("ROZMIAR").setStyle(1).setRequired(false)),
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('weight_manual').setLabel("WAGA RĘCZNIE (OPCJONALNIE)").setStyle(1).setRequired(false))
             );
