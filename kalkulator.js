@@ -4,7 +4,7 @@ const MY_ID = '1419055461776228523';
 
 // GIGANTYCZNA BAZA – 02,03, TU JEST ABSOLUTNIE WSZYSTKO
 const wagiBaza = {
-    // --- KOSZULKI PIŁKARSKIE & SPORT (TOTAL) ---
+    // --- KOSZULKI PIŁKARSKIE & SPORT ---
     'koszulka piłkarska': 250, 'koszulka pilkarska': 250, 'jersey': 250, 'strój piłkarski': 450,
     'real madryt': 260, 'barcelona': 260, 'manchester': 260, 'bayern': 260, 'reprezentacja': 260,
     'arsenal': 260, 'chelsea': 260, 'psg': 260, 'juventus': 260, 'milan': 260, 'inter': 260,
@@ -28,7 +28,7 @@ const wagiBaza = {
     'dzwony': 850, 'flare': 850, 'ee': 280, 'eric emanuel': 280, 'spodenki': 400, 'szorty': 350, 'kąpielówki': 250, 'mesh': 280,
     'corteiz shorts': 450, 'trapstar shorts': 450, 'spodenki dresowe': 450, 'gacie': 150, 'bokserki': 150, 'majtki': 100,
 
-    // --- SKARPETKI & BIELIZNA (MAX DETAL) ---
+    // --- SKARPETKI & BIELIZNA ---
     'skarpetki': 60, 'skarpety': 60, 'stopki': 40, 'skarpetki nike': 70, 'skarpetki wysokie': 80, 'podkolanówki': 100, 'skarpetki bape': 70,
     'skarpety piłkarskie': 120, 'skarpety antypoślizgowe': 100,
 
@@ -37,16 +37,9 @@ const wagiBaza = {
     'tnf': 1100, 'moncler': 1250, 'maya': 1250, 'canada goose': 2100, 'kamizelka': 800, 'bezrękawnik': 800, 'wiatrówka': 500, 'arc teryx': 700,
     'koszulka': 280, 'teciak': 280, 't-shirt': 280, 'polo': 300, 'longsleeve': 400, 'tank top': 200, 'sweter': 700, 'koszula': 400,
 
-    // --- AKCESORIA: BIŻUTERIA & DODATKI ---
-    'okulary': 150, 'gały': 150, 'sunglasses': 150, 'biżuteria': 100, 'łańcuch': 250, 'naszyjnik': 150, 'bransoletka': 100,
-    'sygnet': 80, 'pierścionek': 50, 'kolczyki': 50, 'zegarek': 400, 'watch': 400, 'rolex': 450, 'casio': 200, 'pasek': 350,
-    'belt': 350, 'bb belt': 550, 'czapka': 180, 'beanie': 150, 'kominiarka': 150, 'szalik': 300, 'rękawiczki': 200, 'parasol': 500,
-
-    // --- GADŻETY, ELEKTRONIKA & DOM ---
-    'plecak': 1100, 'backpack': 1100, 'torba': 800, 'bag': 800, 'nerka': 400, 'saszetka': 400, 'sidebag': 400, 'portfel': 200,
-    'etui': 100, 'case': 100, 'breloczek': 50, 'zapalniczka': 100, 'popielniczka': 500, 'dywan': 2500, 'pościel': 1800,
-    'ręcznik': 600, 'perfumy': 400, 'kabel': 150, 'słuchawki': 300, 'airpods': 150, 'głośnik': 1000, 'powerbank': 400,
-    'podkładka': 500, 'plakat': 200, 'figurka': 600, 'kaws': 800, 'lego': 1000, 'naklejki': 20
+    // --- AKCESORIA & GADŻETY ---
+    'okulary': 150, 'gały': 150, 'biżuteria': 100, 'łańcuch': 250, 'zegarek': 400, 'pasek': 350, 'czapka': 180, 'kominiarka': 150,
+    'plecak': 1100, 'torba': 800, 'nerka': 400, 'portfel': 200, 'perfumy': 400, 'słuchawki': 300, 'airpods': 150, 'lego': 1000, 'naklejki': 20
 };
 
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
@@ -55,7 +48,7 @@ function createMainPanel(interaction, cart) {
     const totalW = cart.reduce((s, i) => s + i.weight, 0);
     const embed = new EmbedBuilder()
         .setTitle('📦 VAULT REP • KALKULATOR WAGI')
-        .setDescription(`Witaj **${interaction.user.username}**!\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `> **${n+1}.** ${i.name} — \`${i.weight}g\``).join('\n') || "_Koszyk jest pusty..._"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalW}g\``)
+        .setDescription(`Witaj **${interaction.user.username}**!\n\nAby uruchomić kalkulator, użyj komendy: \`!obliczwage\`\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `> **${n+1}.** ${i.name} — \`${i.weight}g\``).join('\n') || "_Koszyk jest pusty..._"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalW}g\``)
         .setColor(0x00008B)
         .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png')
         .setFooter({ text: 'VAULT REP • BAZA INFINITE • 2026' });
@@ -69,9 +62,17 @@ function createMainPanel(interaction, cart) {
 }
 
 module.exports = {
-    execute: async (interaction) => {
-        global.vaultCarts.set(interaction.user.id, []);
-        await interaction.reply(createMainPanel(interaction, [])).catch(() => {});
+    execute: async (interactionOrMessage) => {
+        // Obsługa zarówno interakcji jak i zwykłej wiadomości !obliczwage
+        const user = interactionOrMessage.author || interactionOrMessage.user;
+        global.vaultCarts.set(user.id, []);
+        
+        const panel = createMainPanel(interactionOrMessage, []);
+        if (interactionOrMessage.reply) {
+            await interactionOrMessage.reply(panel).catch(() => {});
+        } else {
+            await interactionOrMessage.channel.send(panel).catch(() => {});
+        }
     },
 
     handleInteraction: async (interaction) => {
@@ -80,7 +81,7 @@ module.exports = {
         let cart = global.vaultCarts.get(userId);
 
         if (interaction.customId === 'calc_add') {
-            const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('DODAJ PRODUKT');
+            const modal = new ModalBuilder().setCustomId('calc_modal_ai').setTitle('DODAJ PRODUKT');
             modal.addComponents(
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("CO DODAJESZ?").setPlaceholder("np. Koszulka Real Madryt, Nike TN, Skarpetki").setStyle(1).setRequired(true)),
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("ROZMIAR").setStyle(1).setRequired(false)),
@@ -92,7 +93,7 @@ module.exports = {
         if (interaction.isModalSubmit() || interaction.isButton()) {
             if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
 
-            if (interaction.customId === 'modal_ai') {
+            if (interaction.customId === 'calc_modal_ai') {
                 const nameIn = interaction.fields.getTextInputValue('name');
                 const sizeIn = interaction.fields.getTextInputValue('size');
                 const manualIn = interaction.fields.getTextInputValue('weight_manual');
