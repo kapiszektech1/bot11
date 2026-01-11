@@ -12,7 +12,7 @@ async function getWeightFromAI(itemName, size) {
     try {
         const prompt = `Jesteś ekspertem logistyki paczek z Chin. Podaj TYLKO liczbę (gramy) dla przedmiotu: "${itemName}" ${size ? `w rozmiarze ${size}` : ''}. 
         Zasady: Buty z boxem ok. 1400g, Hoodie 900g, T-shirt 250g, Kurtka 1200g. 
-        Zwróć TYLKO liczbę.`;
+        Zwróć TYLKO liczbę bez żadnego tekstu.`;
         
         const result = await aiModel.generateContent(prompt);
         const response = await result.response;
@@ -37,11 +37,12 @@ function createMainPanel(interaction) {
         .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png')
         .setFooter({ text: 'VAULT REP • Wszystkie dane zczytuje AI' });
 
-    // NAPRAWIONE: Dodano () przy ButtonStyle
+    // UŻYCIE NUMERYCZNYCH WARTOŚCI STYLI (BEZPIECZNIEJSZE DLA PARSERA)
+    // 1 = Primary (Niebieski), 4 = Danger (Czerwony), 3 = Success (Zielony)
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('calc_add').setLabel('➕ DODAJ PRZEDMIOT').setButtonStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('calc_remove').setLabel('🗑️ USUŃ OSTATNI').setButtonStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('calc_summary').setLabel('📊 PODSUMUJ PACZKĘ').setButtonStyle(ButtonStyle.Success)
+        new ButtonBuilder().setCustomId('calc_add').setLabel('➕ DODAJ PRZEDMIOT').setButtonStyle(1),
+        new ButtonBuilder().setCustomId('calc_remove').setLabel('🗑️ USUŃ OSTATNI').setButtonStyle(4),
+        new ButtonBuilder().setCustomId('calc_summary').setLabel('📊 PODSUMUJ PACZKĘ').setButtonStyle(3)
     );
 
     return { embeds: [embed], components: [row] };
@@ -63,13 +64,13 @@ module.exports = {
             const modal = new ModalBuilder().setCustomId('modal_ai').setTitle('Dodaj przedmiot do paczki');
 
             const nameInput = new TextInputBuilder()
-                .setCustomId('name').setLabel("Podaj pełny model produktu.").setPlaceholder("np. Jordan 4 Military Black").setStyle(TextInputStyle.Short).setRequired(true);
+                .setCustomId('name').setLabel("Podaj pełny model produktu.").setPlaceholder("np. Jordan 4 Military Black").setStyle(1).setRequired(true);
 
             const sizeInput = new TextInputBuilder()
-                .setCustomId('size').setLabel("Podaj rozmiar (opcjonalnie)").setPlaceholder("np. 42.5 / L").setStyle(TextInputStyle.Short).setRequired(false);
+                .setCustomId('size').setLabel("Podaj rozmiar (opcjonalnie)").setPlaceholder("np. 42.5 / L").setStyle(1).setRequired(false);
 
             const weightInput = new TextInputBuilder()
-                .setCustomId('weight_manual').setLabel("Podaj wagę ręcznie (opcjonalnie)").setPlaceholder("W gramach, np. 1250").setStyle(TextInputStyle.Short).setRequired(false);
+                .setCustomId('weight_manual').setLabel("Podaj wagę ręcznie (opcjonalnie)").setPlaceholder("W gramach, np. 1250").setStyle(1).setRequired(false);
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(nameInput), 
@@ -79,7 +80,7 @@ module.exports = {
             return await interaction.showModal(modal);
         }
 
-        // 2. LOGIKA PO MODALU
+        // 2. LOGIKA PO MODALU (EDYCJA PANELU)
         if (interaction.isModalSubmit() && interaction.customId === 'modal_ai') {
             await interaction.deferUpdate();
             
@@ -102,7 +103,7 @@ module.exports = {
             await interaction.editReply(panel);
         }
 
-        // 3. USUWANIE
+        // 3. USUWANIE (EDYCJA PANELU)
         if (interaction.customId === 'calc_remove') {
             if (cart.length > 0) {
                 cart.pop();
