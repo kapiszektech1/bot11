@@ -44,11 +44,15 @@ const wagiBaza = {
 
 if (!global.vaultCarts) { global.vaultCarts = new Map(); }
 
-function createMainPanel(interaction, cart) {
+function createMainPanel(target, cart) {
+    // NAPRAWA: Pobieranie nazwy użytkownika niezależnie od typu (Interaction/Message)
+    const user = target.author || target.user;
+    const userName = user ? user.username : 'Użytkowniku';
+
     const totalW = cart.reduce((s, i) => s + i.weight, 0);
     const embed = new EmbedBuilder()
         .setTitle('📦 VAULT REP • KALKULATOR WAGI')
-        .setDescription(`Witaj **${interaction.user.username}**!\n\nAby uruchomić kalkulator, użyj komendy: \`!obliczwage\`\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `> **${n+1}.** ${i.name} — \`${i.weight}g\``).join('\n') || "_Koszyk jest pusty..._"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalW}g\``)
+        .setDescription(`Witaj **${userName}**!\n\nAby uruchomić kalkulator, użyj komendy: \`!obliczwage\`\n\n**🛒 TWOJA LISTA:**\n${cart.map((i, n) => `> **${n+1}.** ${i.name} — \`${i.weight}g\``).join('\n') || "_Koszyk jest pusty..._"}\n\n**⚖️ ŁĄCZNA WAGA:** \`${totalW}g\``)
         .setColor(0x00008B)
         .setThumbnail('https://cdn.discordapp.com/attachments/1458122275973890222/1459848674631749825/wymiary-paczki.png')
         .setFooter({ text: 'VAULT REP • BAZA INFINITE • 2026' });
@@ -62,16 +66,15 @@ function createMainPanel(interaction, cart) {
 }
 
 module.exports = {
-    execute: async (interactionOrMessage) => {
-        // Obsługa zarówno interakcji jak i zwykłej wiadomości !obliczwage
-        const user = interactionOrMessage.author || interactionOrMessage.user;
+    execute: async (target) => {
+        const user = target.author || target.user;
         global.vaultCarts.set(user.id, []);
         
-        const panel = createMainPanel(interactionOrMessage, []);
-        if (interactionOrMessage.reply) {
-            await interactionOrMessage.reply(panel).catch(() => {});
+        const panel = createMainPanel(target, []);
+        if (target.reply) {
+            await target.reply(panel).catch(() => {});
         } else {
-            await interactionOrMessage.channel.send(panel).catch(() => {});
+            await target.channel.send(panel).catch(() => {});
         }
     },
 
@@ -83,73 +86,71 @@ module.exports = {
         if (interaction.customId === 'calc_add') {
             const modal = new ModalBuilder().setCustomId('calc_modal_ai').setTitle('DODAJ PRODUKT');
             modal.addComponents(
-                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("CO DODAJESZ?").setPlaceholder("np. Koszulka Real Madryt, Nike TN, Skarpetki").setStyle(1).setRequired(true)),
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('name').setLabel("CO DODAJESZ?").setPlaceholder("np. Koszulka Real Madryt, Nike TN").setStyle(1).setRequired(true)),
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('size').setLabel("ROZMIAR").setStyle(1).setRequired(false)),
                 new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('weight_manual').setLabel("WAGA RĘCZNIE (OPCJONALNIE)").setStyle(1).setRequired(false))
             );
             return await interaction.showModal(modal).catch(() => {});
         }
 
-        if (interaction.isModalSubmit() || interaction.isButton()) {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
+        // Deferujemy odpowiedź dla przycisków i modali, żeby nie było błędu "Interaction has already been acknowledged"
+        if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate().catch(() => {});
 
-            if (interaction.customId === 'calc_modal_ai') {
-                const nameIn = interaction.fields.getTextInputValue('name');
-                const sizeIn = interaction.fields.getTextInputValue('size');
-                const manualIn = interaction.fields.getTextInputValue('weight_manual');
-                
-                let weight = null;
-                if (manualIn && !isNaN(manualIn)) {
-                    weight = parseInt(manualIn);
-                } else {
-                    const n = nameIn.toLowerCase();
-                    let bestMatch = null;
-                    for (const key in wagiBaza) {
-                        if (n.includes(key)) {
-                            if (!bestMatch || key.length > bestMatch.length) {
-                                bestMatch = key;
-                                weight = wagiBaza[key];
-                            }
+        if (interaction.customId === 'calc_modal_ai') {
+            const nameIn = interaction.fields.getTextInputValue('name');
+            const sizeIn = interaction.fields.getTextInputValue('size');
+            const manualIn = interaction.fields.getTextInputValue('weight_manual');
+            
+            let weight = null;
+            if (manualIn && !isNaN(manualIn)) {
+                weight = parseInt(manualIn);
+            } else {
+                const n = nameIn.toLowerCase();
+                let bestMatch = null;
+                for (const key in wagiBaza) {
+                    if (n.includes(key)) {
+                        if (!bestMatch || key.length > bestMatch.length) {
+                            bestMatch = key;
+                            weight = wagiBaza[key];
                         }
                     }
                 }
-
-                if (weight === null) {
-                    weight = 800; 
-                    await interaction.followUp({ content: `⚠️ Model **"${nameIn}"** nie jest w bazie. Ustawiono 800g.`, ephemeral: true }).catch(() => {});
-                    try {
-                        const boss = await interaction.client.users.fetch(MY_ID);
-                        await boss.send(`🚨 **02,03, DOPISZ:** \`${nameIn}\``);
-                    } catch (e) {}
-                }
-                
-                cart.push({ name: sizeIn ? `${nameIn} [${sizeIn}]` : nameIn, weight });
-                global.vaultCarts.set(userId, cart);
-                await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
             }
 
-            if (interaction.customId === 'calc_remove') {
-                cart.pop();
-                global.vaultCarts.set(userId, cart);
-                await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
+            if (weight === null) {
+                weight = 800; 
+                try {
+                    const boss = await interaction.client.users.fetch(MY_ID);
+                    await boss.send(`🚨 **02,03, DOPISZ:** \`${nameIn}\``);
+                } catch (e) {}
             }
+            
+            cart.push({ name: sizeIn ? `${nameIn} [${sizeIn}]` : nameIn, weight });
+            global.vaultCarts.set(userId, cart);
+            await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
+        }
 
-            if (interaction.customId === 'calc_summary') {
-                if (cart.length === 0) return;
-                const tW = cart.reduce((a, b) => a + b.weight, 0);
-                const cena = (31.91 + (Math.ceil(tW / 500) - 1) * 30.96 + 37.63).toFixed(2);
+        if (interaction.customId === 'calc_remove') {
+            cart.pop();
+            global.vaultCarts.set(userId, cart);
+            await interaction.editReply(createMainPanel(interaction, cart)).catch(() => {});
+        }
 
-                const embedS = new EmbedBuilder()
-                    .setTitle('📊 FINALNA WYCENA VAULT REP')
-                    .setColor(0x00FF00)
-                    .addFields(
-                        { name: '⚖️ ŁĄCZNA WAGA', value: `> **${tW}g**`, inline: true },
-                        { name: '💰 WYSYŁKA ETL', value: `> **${cena} PLN**`, inline: true },
-                        { name: '🚀 KUPON', value: 'Kod **lucky8** (-56 PLN)' }
-                    );
+        if (interaction.customId === 'calc_summary') {
+            if (cart.length === 0) return;
+            const tW = cart.reduce((a, b) => a + b.weight, 0);
+            const cena = (31.91 + (Math.ceil(tW / 500) - 1) * 30.96 + 37.63).toFixed(2);
 
-                await interaction.followUp({ embeds: [embedS] }).catch(() => {});
-            }
+            const embedS = new EmbedBuilder()
+                .setTitle('📊 FINALNA WYCENA VAULT REP')
+                .setColor(0x00FF00)
+                .addFields(
+                    { name: '⚖️ ŁĄCZNA WAGA', value: `> **${tW}g**`, inline: true },
+                    { name: '💰 WYSYŁKA ETL', value: `> **${cena} PLN**`, inline: true },
+                    { name: '🚀 KUPON', value: 'Kod **lucky8** (-56 PLN)' }
+                );
+
+            await interaction.followUp({ embeds: [embedS] }).catch(() => {});
         }
     }
 };
