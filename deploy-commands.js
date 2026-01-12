@@ -29,8 +29,13 @@ const commands = [
         .setDMPermission(false),
 
     new SlashCommandBuilder()
-        .setName('statusy-panel') // DODANO: Nowa komenda statusów
+        .setName('statusy-panel')
         .setDescription('Wysyła estetyczny panel statusów logistycznych (AMS-DE-PL)')
+        .setDMPermission(false),
+
+    new SlashCommandBuilder() // DODANO
+        .setName('panel-śledzenie')
+        .setDescription('Wysyła panel informacyjny o śledzeniu (Admin)')
         .setDMPermission(false),
 
     // 2. System Moderacji
@@ -67,6 +72,15 @@ const commands = [
     new SlashCommandBuilder()
         .setName('obliczwage')
         .setDescription('Otwiera inteligentny kalkulator wagi i ceny paczki VAULT AI')
+        .setDMPermission(false),
+
+    new SlashCommandBuilder() // DODANO
+        .setName('śledź-paczkę')
+        .setDescription('Sprawdź gdzie jest Twoja paczka')
+        .addStringOption(option => 
+            option.setName('numer')
+                .setDescription('Wklej numer śledzenia (tracking number)')
+                .setRequired(true))
         .setDMPermission(false),
 
     new SlashCommandBuilder()
