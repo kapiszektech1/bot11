@@ -8,7 +8,7 @@ module.exports = {
             .setDMPermission(false),
         new SlashCommandBuilder()
             .setName('śledź-paczkę')
-            .setDescription('Sprawdź gdzie jest Twoja paczka')
+            .setDescription('Sprawdź gdzie jest Twoja paczka (Widoczne tylko dla Ciebie)')
             .addStringOption(option => 
                 option.setName('numer')
                     .setDescription('Wklej numer śledzenia (tracking number)')
@@ -19,10 +19,13 @@ module.exports = {
     execute: async function(interaction) {
         const { commandName } = interaction;
 
-        // --- 1. KOMENDA: PANEL-ŚLEDZENIE ---
+        // --- 1. KOMENDA: PANEL-ŚLEDZENIE (Wysyła publiczny panel na kanał) ---
         if (commandName === 'panel-śledzenie') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return await interaction.reply({ content: '> ❌ **Brak uprawnień.**', flags: [MessageFlags.Ephemeral] });
+                return await interaction.reply({ 
+                    content: '> ❌ **Brak uprawnień.** Tylko Zarząd może wysłać ten panel.', 
+                    flags: [MessageFlags.Ephemeral] 
+                });
             }
 
             const embedPanel = new EmbedBuilder()
@@ -43,19 +46,18 @@ module.exports = {
                 .setFooter({ text: 'VAULT REP • Logistics System', iconURL: interaction.guild.iconURL() });
 
             await interaction.channel.send({ embeds: [embedPanel] });
-            return await interaction.reply({ content: '✅ Panel śledzenia wysłany.', flags: [MessageFlags.Ephemeral] });
+            return await interaction.reply({ content: '✅ Panel śledzenia został wysłany na ten kanał.', flags: [MessageFlags.Ephemeral] });
         }
 
-        // --- 2. KOMENDA: ŚLEDŹ-PACZKĘ ---
+        // --- 2. KOMENDA: ŚLEDŹ-PACZKĘ (Prywatna odpowiedź dla użytkownika) ---
         if (commandName === 'śledź-paczkę') {
             const numerRaw = interaction.options.getString('numer');
-            const numer = numerRaw.toUpperCase().replace(/\s/g, ''); // Usuwa spacje i powiększa litery
+            const numer = numerRaw.toUpperCase().replace(/\s/g, '');
 
             // --- INTELIGENTNE ROZPOZNAWANIE ---
             let serviceName = 'Przesyłka Międzynarodowa';
             let icon = '📦';
             
-            // Logika wykrywania
             if (numer.endsWith('DE')) {
                 serviceName = 'DHL Germany / Deutsche Post';
                 icon = '🇩🇪';
@@ -68,7 +70,7 @@ module.exports = {
             } else if (numer.endsWith('CN')) {
                 serviceName = 'China Post';
                 icon = '🇨🇳';
-            } else if (/^\d{10,}$/.test(numer) || numer.startsWith('JD')) { // Np. 00340434... lub JD...
+            } else if (/^\d{10,}$/.test(numer) || numer.startsWith('JD')) {
                 serviceName = 'DHL Express / eCommerce';
                 icon = '✈️';
             } else if (numer.startsWith('LF') || numer.startsWith('LP')) {
@@ -89,23 +91,24 @@ module.exports = {
                 .setTitle(`${icon} KARTA PRZESYŁKI`)
                 .setDescription(`Numer: **${numer}**`)
                 .addFields(
-                    { name: '📍 Status Przesyłki', value: 'Kliknij przycisk poniżej, aby zobaczyć pełną historię statusów.', inline: false },
-                    { name: '🔎 Wykryty przewoźnik', value: serviceName, inline: true }
+                    { name: '📍 Status Przesyłki', value: 'Kliknij przycisk poniżej, aby otworzyć śledzenie w przeglądarce. Dane są pobierane w czasie rzeczywistym.', inline: false },
+                    { name: '🔎 Przewoźnik', value: serviceName, inline: true }
                 )
-                .setFooter({ text: `Szukano przez: ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
+                .setFooter({ text: `Widok prywatny • VAULT Logistics`, iconURL: interaction.user.displayAvatarURL() })
                 .setTimestamp();
 
-            // Przyciski
-            const buttons = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setLabel('Sprawdź na 17Track')
-                        .setStyle(ButtonStyle.Link)
-                        .setURL(link17Track)
-                        .setEmoji('🌐')
-                );
+            const buttons = new ActionRowBuilder();
+            
+            // Przycisk główny (17Track)
+            buttons.addComponents(
+                new ButtonBuilder()
+                    .setLabel('Sprawdź na 17Track')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(link17Track)
+                    .setEmoji('🌐')
+            );
 
-            // Jeśli to DHL/DE, dodajemy opcję DHL
+            // Przycisk dodatkowy (DHL lub Fujexp)
             if (numer.endsWith('DE') || serviceName.includes('DHL')) {
                 buttons.addComponents(
                     new ButtonBuilder()
@@ -115,7 +118,6 @@ module.exports = {
                         .setEmoji('🟨')
                 );
             } else {
-                // Dla innych dodajemy Fujexp jako backup
                 buttons.addComponents(
                     new ButtonBuilder()
                         .setLabel('Backup (Fujexp)')
@@ -125,7 +127,12 @@ module.exports = {
                 );
             }
 
-            await interaction.reply({ embeds: [embedTracking], components: [buttons] });
+            // WYSYŁKA JAKO EPHEMERAL (TYLKO DLA UŻYTKOWNIKA)
+            await interaction.reply({ 
+                embeds: [embedTracking], 
+                components: [buttons], 
+                flags: [MessageFlags.Ephemeral] 
+            });
         }
     }
 };
