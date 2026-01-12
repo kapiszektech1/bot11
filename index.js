@@ -13,7 +13,8 @@ const narzedzia = require('./narzedzia.js');
 const regulaminPanel = require('./regulaminpanel.js');
 const panelZarobek = require('./panel-zarobek.js'); 
 const kalkulator = require('./kalkulator.js');
-const statusyPanel = require('./statusy-panel.js'); // DODANO: Import statusów
+const statusyPanel = require('./statusy-panel.js');
+const sledzenie = require('./sledzenie.js'); // DODANO: Import systemu śledzenia
 const http = require('http');
 require('dotenv').config();
 
@@ -73,6 +74,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
         try {
+            // Panel Kuponów i Ticketów
             if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
             if (commandName === 'panel-ticket') return await tickets.execute(interaction);
             if (commandName === 'link') return await linkCommand.execute(interaction);
@@ -80,11 +82,18 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
             if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
             if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
-            if (commandName === 'statusy-panel') return await statusyPanel.execute(interaction); // DODANO: Obsługa komendy
+            if (commandName === 'statusy-panel') return await statusyPanel.execute(interaction);
+            
+            // System Śledzenia (Dwie komendy obsługiwane przez jeden moduł)
+            if (commandName === 'panel-śledzenie' || commandName === 'śledź-paczkę') {
+                return await sledzenie.execute(interaction);
+            }
 
+            // Moderacja
             const modCommands = ['ban', 'kick', 'mute', 'warn'];
             if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
 
+            // Narzędzia
             const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
             if (toolCommands.includes(commandName)) return await narzedzia.execute(interaction);
         } catch (e) {
@@ -92,11 +101,14 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
+    // Przyciski, Modale, Menu
     if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
         const cId = interaction.customId;
+        
         if (cId.startsWith('calc_') || cId.startsWith('modal_ai')) {
             return await kalkulator.handleInteraction(interaction);
         }
+        
         try {
             if (tickets?.handleInteraction) {
                 await tickets.handleInteraction(interaction);
@@ -154,4 +166,5 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+console.log("--- VAULT REP: SYSTEM STARTOWANIA... ---");
 client.login(process.env.TOKEN);
