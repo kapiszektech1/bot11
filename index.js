@@ -13,6 +13,7 @@ const narzedzia = require('./narzedzia.js');
 const regulaminPanel = require('./regulaminpanel.js');
 const panelZarobek = require('./panel-zarobek.js'); 
 const kalkulator = require('./kalkulator.js');
+const statusyPanel = require('./statusy-panel.js'); // DODANO: Import statusów
 const http = require('http');
 require('dotenv').config();
 
@@ -53,17 +54,14 @@ client.on('ready', async () => {
         status: 'online',
     });
 
-    // TikTok Check co 5 min
     setInterval(() => {
         if (tiktok?.checkTikTok) tiktok.checkTikTok(client);
     }, 300000); 
     
-    // Pobieranie zaproszeń
     for (const [id, guild] of client.guilds.cache) {
         try {
             const guildInvites = await guild.invites.fetch();
             invites.set(guild.id, new Collection(guildInvites.map(inv => [inv.code, inv.uses])));
-            console.log(`Pobrano zaproszenia dla: ${guild.name}`);
         } catch (err) {
             console.log(`Błąd zaproszeń dla: ${guild.name}`);
         }
@@ -72,7 +70,6 @@ client.on('ready', async () => {
 
 // --- OBSŁUGA INTERAKCJI ---
 client.on('interactionCreate', async interaction => {
-    // 1. Obsługa Komend Slash (/)
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
         try {
@@ -83,6 +80,7 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'regulamin-panel') return await regulaminPanel.execute(interaction);
             if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
             if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
+            if (commandName === 'statusy-panel') return await statusyPanel.execute(interaction); // DODANO: Obsługa komendy
 
             const modCommands = ['ban', 'kick', 'mute', 'warn'];
             if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
@@ -94,18 +92,12 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // 2. Obsługa Przycisków, Modali i Menu Wyboru ( StringSelectMenu )
     if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
         const cId = interaction.customId;
-
-        // Priorytet: Kalkulator AI
         if (cId.startsWith('calc_') || cId.startsWith('modal_ai')) {
             return await kalkulator.handleInteraction(interaction);
         }
-
-        // System Ticketów i inne panele
         try {
-            // Przesyłamy każdą inną interakcję do modułu ticketów
             if (tickets?.handleInteraction) {
                 await tickets.handleInteraction(interaction);
             }
@@ -120,14 +112,12 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 });
 
 client.on('guildMemberAdd', async (member) => {
-    // Powitania
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
         const welcomeEmbed = createWelcomeEmbed(member);
         await welcomeChannel.send({ embeds: [welcomeEmbed] }).catch(console.error);
     }
 
-    // Logowanie zaproszeń
     const logChannel = member.guild.channels.cache.get(INVITE_LOG_CHANNEL_ID);
     if (logChannel) {
         try {
@@ -144,22 +134,16 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// --- KOMENDY TEKSTOWE ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-
-    // Automatyczna moderacja słów
     await chatMod.handleChatModeration(message);
 
-    // Komenda tekstowa !obliczwage
     if (message.content === '!obliczwage') {
         if (kalkulator?.execute) return await kalkulator.execute(message);
     }
 
-    // Testy
     if (message.content === '!powitania-test') {
-        const embed = createWelcomeEmbed(message.member);
-        await message.channel.send({ content: `🚀 **VAULT REP: Test powitań**`, embeds: [embed] });
+        await message.channel.send({ embeds: [createWelcomeEmbed(message.member)] });
     }
 
     if (message.content === '!powiadomienia-test') {
@@ -170,7 +154,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-console.log("--- VAULT REP: STARTOWANIE... ---");
-client.login(process.env.TOKEN).catch(err => {
-    console.error("❌ BŁĄD LOGOWANIA:", err);
-});
+client.login(process.env.TOKEN);
