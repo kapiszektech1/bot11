@@ -28,6 +28,11 @@ const commands = [
         .setDescription('Wysyła panel współpracy zarobkowej (Zarząd)')
         .setDMPermission(false),
 
+    new SlashCommandBuilder()
+        .setName('statusy-panel') // DODANO: Nowa komenda statusów
+        .setDescription('Wysyła estetyczny panel statusów logistycznych (AMS-DE-PL)')
+        .setDMPermission(false),
+
     // 2. System Moderacji
     new SlashCommandBuilder()
         .setName('ban')
@@ -58,7 +63,7 @@ const commands = [
         .addStringOption(opt => opt.setName('powod').setDescription('Powód ostrzeżenia').setRequired(true))
         .setDMPermission(false),
 
-    // 3. Narzędzia i Linki (DODANO OBLICZWAGE)
+    // 3. Narzędzia i Linki
     new SlashCommandBuilder()
         .setName('obliczwage')
         .setDescription('Otwiera inteligentny kalkulator wagi i ceny paczki VAULT AI')
