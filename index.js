@@ -14,7 +14,8 @@ const regulaminPanel = require('./regulaminpanel.js');
 const panelZarobek = require('./panel-zarobek.js'); 
 const kalkulator = require('./kalkulator.js');
 const statusyPanel = require('./statusy-panel.js');
-const sledzenie = require('./sledzenie.js'); // DODANO: Import systemu śledzenia
+const sledzenie = require('./sledzenie.js');
+const airpodsPanel = require('./freeairpods-panel.js'); // DODANO: Import panelu AirPods
 const http = require('http');
 require('dotenv').config();
 
@@ -74,7 +75,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
         try {
-            // Panel Kuponów i Ticketów
+            // Panele i Systemy
             if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
             if (commandName === 'panel-ticket') return await tickets.execute(interaction);
             if (commandName === 'link') return await linkCommand.execute(interaction);
@@ -83,8 +84,9 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
             if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
             if (commandName === 'statusy-panel') return await statusyPanel.execute(interaction);
+            if (commandName === 'freeairpods-panel') return await airpodsPanel.execute(interaction); // DODANO: Obsługa komendy
             
-            // System Śledzenia (Dwie komendy obsługiwane przez jeden moduł)
+            // System Śledzenia
             if (commandName === 'panel-śledzenie' || commandName === 'śledź-paczkę') {
                 return await sledzenie.execute(interaction);
             }
