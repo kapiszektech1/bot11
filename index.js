@@ -15,7 +15,8 @@ const panelZarobek = require('./panel-zarobek.js');
 const kalkulator = require('./kalkulator.js');
 const statusyPanel = require('./statusy-panel.js');
 const sledzenie = require('./sledzenie.js');
-const airpodsPanel = require('./freeairpods-panel.js'); // DODANO: Import panelu AirPods
+const airpodsPanel = require('./freeairpods-panel.js'); 
+const znajdzQC = require('./znajdzqc.js'); // DODANO: Import systemu QC
 const http = require('http');
 require('dotenv').config();
 
@@ -75,7 +76,6 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
         try {
-            // Panele i Systemy
             if (commandName === 'panel-kupony') return await panelKupony.execute(interaction);
             if (commandName === 'panel-ticket') return await tickets.execute(interaction);
             if (commandName === 'link') return await linkCommand.execute(interaction);
@@ -84,18 +84,15 @@ client.on('interactionCreate', async interaction => {
             if (commandName === 'panel-zarobek') return await panelZarobek.execute(interaction);
             if (commandName === 'obliczwage') return await kalkulator.execute(interaction);
             if (commandName === 'statusy-panel') return await statusyPanel.execute(interaction);
-            if (commandName === 'freeairpods-panel') return await airpodsPanel.execute(interaction); // DODANO: Obsługa komendy
+            if (commandName === 'freeairpods-panel') return await airpodsPanel.execute(interaction);
             
-            // System Śledzenia
             if (commandName === 'panel-śledzenie' || commandName === 'śledź-paczkę') {
                 return await sledzenie.execute(interaction);
             }
 
-            // Moderacja
             const modCommands = ['ban', 'kick', 'mute', 'warn'];
             if (modCommands.includes(commandName)) return await moderacja.execute(interaction);
 
-            // Narzędzia
             const toolCommands = ['ping', 'userinfo', 'serverinfo', 'clear'];
             if (toolCommands.includes(commandName)) return await narzedzia.execute(interaction);
         } catch (e) {
@@ -103,7 +100,6 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // Przyciski, Modale, Menu
     if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
         const cId = interaction.customId;
         
@@ -148,8 +144,13 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
+// --- OBSŁUGA WIADOMOŚCI ---
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+
+    // --- SYSTEM QC (AUTOMATYCZNY) ---
+    if (znajdzQC?.execute) await znajdzQC.execute(message);
+
     await chatMod.handleChatModeration(message);
 
     if (message.content === '!obliczwage') {
